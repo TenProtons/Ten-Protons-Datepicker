@@ -146,6 +146,9 @@ Time picker, presets and a year / month picker view are not implemented. Month a
 npm install
 npm run typecheck
 npm run build      # tsup -> dist/
+npm run demo       # build, then serve the repo; open http://localhost:5173/demo/
 ```
+
+`demo/index.html` imports from `dist/` and must be served over HTTP (ES modules don't load from `file://`).
 
 MIT

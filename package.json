@@ -29,6 +29,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsup",
+    "demo": "npm run build && npx --yes serve . -l 5173",
     "prepublishOnly": "npm run typecheck && npm run build"
   },
   "devDependencies": {
