@@ -3,7 +3,7 @@
 Zero-dependency, accessible, framework-agnostic datepicker. Vanilla TypeScript + a native Web Component.
 
 - WAI-ARIA date picker dialog pattern, full keyboard support, live-region announcements
-- Single, range and multiple selection as separate, tree-shakeable modules
+- Single, range and multiple selection, and an optional time selector, as separate, tree-shakeable modules
 - `Intl`-based localisation, RTL, locale-derived input format, first day of week
 - Manual input that is parsed on blur / Enter and validated against min / max / disabled dates
 - CSS variables, light / dark (`prefers-color-scheme` or `data-theme`), replaceable class names
@@ -24,14 +24,14 @@ npm i ten-protons-datepicker
 <x-datepicker name="period" mode="range" locale="uk" min="2025-01-01" label="Period"></x-datepicker>
 ```
 
-`mode="range"` / `mode="multiple"` load their module on demand, so single-date pages don't pay for them.
+`mode="range"` / `mode="multiple"` and `enable-time` load their module on demand, so single-date pages don't pay for them.
 
 | Attribute | Notes |
 | --- | --- |
 | `value` | ISO: `2025-03-05`, range `2025-03-01/2025-03-10`, multiple `2025-03-01,2025-03-05`. Unix timestamps work too; with `output-timestamp` the property returns them. See [Unix timestamps](#unix-timestamps) |
 | `name`, `placeholder`, `label`, `disabled` | `label` is the input's accessible name. Form-associated where `ElementInternals` exists |
 | `mode`, `locale`, `min`, `max`, `date-format`, `first-day`, `position`, `theme` | see [Options](#options) |
-| `number-of-months`, `show-other-months`, `allow-input`, `close-on-select`, `disabled-days`, `output-timestamp`, `inline` | booleans: present = true, `="false"` = false |
+| `number-of-months`, `show-other-months`, `allow-input`, `close-on-select`, `disabled-days`, `output-timestamp`, `enable-time`, `inline` | booleans: present = true, `="false"` = false |
 
 ```js
 const el = document.querySelector('x-datepicker');
@@ -61,7 +61,7 @@ dp.destroy();
 
 Methods: `open() close() toggle() destroy() getDate() setDate(date, triggerChange?) setOptions(partial) jumpToDate(date) setRange(start, end)`.
 
-`withMultiple` lives in `ten-protons-datepicker/multiple`. Without the helpers, import the module for its side effect and pass `mode: 'range'`. Selecting a mode that isn't imported throws a descriptive error.
+`withMultiple` lives in `ten-protons-datepicker/multiple` and `withTime` in `ten-protons-datepicker/time`. Without the helpers, import the module for its side effect and pass `mode: 'range'` / `enableTime: true`. Selecting a mode or `enableTime` without importing its module throws a descriptive error.
 
 With `inline: true` the calendar renders inside the given element (any element, not just an input).
 
@@ -80,9 +80,10 @@ With `inline: true` the calendar renders inside the given element (any element, 
 | `position` | `'auto'` | `auto top bottom left right`; auto flips above when there is no room below |
 | `theme` | auto | `'light' \| 'dark'` |
 | `allowInput` | `true` | `false` makes the input read-only |
-| `closeOnSelect` | `true` (single, range), `false` (multiple) | |
+| `closeOnSelect` | `true` (single, range), `false` (multiple, and with `enableTime`) | |
 | `closeOnOutsideClick` | `true` | outside pointer-down or focus |
 | `classes` | | replace any default class name (`ClassNames`) |
+| `enableTime` | `false` | add an `HH:mm:ss` time selector below the calendar, see [Date & time](#date--time). Needs `ten-protons-datepicker/time` |
 | `outputTimestamp` | `false` | report Unix timestamps (seconds) instead of `Date`s / ISO strings, see [Unix timestamps](#unix-timestamps) |
 | `isoInput` | | input that receives the ISO value (or the timestamp with `outputTimestamp`), e.g. a hidden field |
 | `anchor`, `appendTo` | input, `document.body` | construction only |
@@ -128,10 +129,78 @@ const dp = new Datepicker(input, { dateFormat: 'dd.MM.yyyy', outputTimestamp: tr
 
 Things to know:
 
-- **Day granularity.** The picker selects days, not instants. A timestamp is converted to the **local** calendar day it falls on, and the timestamp that comes out is the **local midnight** of that day. So `timestamp -> timestamp` normalises the time of day (`1794072736` comes back as `1794009600`), and it is stable from then on: feeding the output back in gives the same value.
+- **Day granularity (without `enableTime`).** A date-only picker selects days, not instants; with [`enableTime`](#date--time) the time of day is kept too. A timestamp is converted to the **local** calendar day it falls on, and the timestamp that comes out is the **local midnight** of that day. So `timestamp -> timestamp` normalises the time of day (`1794072736` comes back as `1794009600`), and it is stable from then on: feeding the output back in gives the same value.
 - **Time zones.** "Local" is the browser's time zone, in line with the rest of the picker. A timestamp for UTC midnight (`1741996800` = 2025-03-15T00:00Z) is still March 14 in New York. If your backend stores UTC-midnight timestamps for plain dates, convert them before passing them in.
 - **Seconds only.** Millisecond timestamps (13 digits) are not recognised.
 - **Types.** `DatepickerValue` is `Date | Date[] | number | number[] | null`; narrow it with `typeof` / `instanceof` or check `outputTimestamp` yourself. With the default nothing changes at runtime.
+
+## Date & time
+
+`enableTime: true` (`enable-time` on the web component) adds a 24-hour **hours : minutes : seconds** selector below the calendar. It is an optional module, so date-only bundles don't pay for it:
+
+```ts
+import { Datepicker } from 'ten-protons-datepicker';
+import { withTime } from 'ten-protons-datepicker/time'; // or: import 'ten-protons-datepicker/time' and pass enableTime: true
+
+const dp = withTime(new Datepicker(input, { dateFormat: 'dd.MM.yyyy', onChange: (d) => save(d) }));
+```
+
+```html
+<x-datepicker enable-time output-timestamp name="meeting"></x-datepicker> <!-- loads the time module itself -->
+```
+
+How it behaves:
+
+- **Picking.** A newly picked day gets the time currently shown in the selector (`00:00:00` until you change it). Editing the selector immediately changes the time of the selected date(s) and fires `change`. Each field is a spinbutton: type digits, `↑` / `↓` (wraps), `Home` / `End`; values are clamped on blur / `Enter`.
+- **The popup stays open** after picking a day so you can set the time (`closeOnSelect` defaults to `false` with `enableTime`). Close it with `Escape`, `Enter` in the input, or a click outside.
+- **Display.** The input shows the date in your `dateFormat` followed by the time as `HH:mm:ss` (24-hour): `15.03.2025 13:07:09`. `dateFormat` only controls the date part. The time format is fixed.
+- **Typing.** `15.03.2025 13:07:09`, `15.03.2025 13:07` (seconds default to 0), ISO `2025-03-15T13:07:09` (or with a space), and Unix timestamps. A date typed **without** a time takes the time currently in the selector. An invalid time (`24:00`, `10:60`) is rejected like any invalid date.
+- **Range and multiple.** One time applies to all selected dates: the selector sets every date at once. Text typed with different times per date (`10.03.2025 09:00:00 - 12.03.2025 18:30:00`) keeps them until you touch the selector.
+- **Limits are day-based.** `minDate`, `maxDate` and the disabled-date options compare calendar days; they don't constrain the time of day.
+- **Screen readers.** The selector is a labelled group (`time` / `hours` / `minutes` / `seconds` strings, overridable in the `locale` object, translated in `locales/uk`), and the selection announcement includes the time.
+- **Switching at runtime.** `setOptions({ enableTime })` adds `00:00:00` to selected dates or drops their time.
+
+### Time and `outputTimestamp`
+
+Timestamps are understood on input whatever the options are (see [Unix timestamps](#unix-timestamps)); `outputTimestamp` and `enableTime` decide what comes out:
+
+| | `outputTimestamp: false` (default) | `outputTimestamp: true` |
+| --- | --- | --- |
+| **`enableTime: false`** (default) | `Date` at local midnight; ISO `2025-03-15` | timestamp of local midnight: `1741996800` |
+| **`enableTime: true`** | `Date` with the selected time; ISO `2025-03-15T13:07:09` | exact timestamp including the time: `1742044029` |
+
+"Out" means `getDate()`, `onChange`, the `change` event `detail`, the `isoInput` value, and the web component's `value` and form value. The text in the input is always the formatted date (plus `HH:mm:ss` with `enableTime`).
+
+All combinations, with and without time, with and without timestamp output (values for a browser in UTC):
+
+```ts
+// 1. date only, Date out (the defaults)
+new Datepicker(input, { dateFormat: 'dd.MM.yyyy' });
+//    typed "15.03.2025"            shows 15.03.2025            getDate() = Date(2025-03-15 00:00:00)
+//    typed "1742044029"            shows 15.03.2025            getDate() = Date(2025-03-15 00:00:00)   the time is dropped
+
+// 2. date only, timestamp out
+new Datepicker(input, { dateFormat: 'dd.MM.yyyy', outputTimestamp: true });
+//    typed "15.03.2025"            shows 15.03.2025            getDate() = 1741996800
+//    typed "1742044029"            shows 15.03.2025            getDate() = 1741996800                  normalised to midnight
+
+// 3. date + time, Date out
+withTime(new Datepicker(input, { dateFormat: 'dd.MM.yyyy' }));
+//    typed "15.03.2025 13:07:09"   shows 15.03.2025 13:07:09   getDate() = Date(2025-03-15 13:07:09)
+//    typed "1742044029"            shows 15.03.2025 13:07:09   getDate() = Date(2025-03-15 13:07:09)
+
+// 4. date + time, timestamp out
+withTime(new Datepicker(input, { dateFormat: 'dd.MM.yyyy', outputTimestamp: true }));
+//    typed "15.03.2025 13:07:09"   shows 15.03.2025 13:07:09   getDate() = 1742044029
+//    typed "1742044029"            shows 15.03.2025 13:07:09   getDate() = 1742044029                  exact round trip
+```
+
+Ranges work the same way: `withTime(withRange(new Datepicker(input, { outputTimestamp: true })))` returns `[1741597200, 1741804200]` for 10 March 09:00:00 to 12 March 18:30:00 (UTC). In the web component, `<x-datepicker enable-time mode="range">` has the value `2025-03-10T09:00:00/2025-03-12T18:30:00`, or `1741597200/1741804200` with `output-timestamp`.
+
+Things to know:
+
+- **Local time.** As everywhere in the picker, the time of day is in the browser's time zone, and the timestamps are the instants of those local times. A time that doesn't exist (the hour skipped by a daylight-saving change, e.g. `02:30` on 9 March 2025 in New York) is moved to the next valid time (`03:30`), and the input shows that.
+- **Seconds.** Dates are kept to the second; milliseconds are dropped.
 
 ## Keyboard
 
@@ -143,13 +212,13 @@ Things to know:
 | `PageUp` / `PageDown` | previous / next month; with `Shift`, previous / next year |
 | `Enter` / `Space` | select |
 | `Escape` | close, focus returns to where it came from |
-| `Tab` | cycles inside the dialog (`aria-modal`) |
+| `Tab` | cycles inside the dialog (`aria-modal`), including the time fields |
 
 Opening with the mouse keeps focus in the input so you can keep typing; opening with the keyboard, the toggle button or `open()` moves focus into the grid.
 
 ## Localisation
 
-Month and weekday names, the default numeric format, first weekday and direction come from `Intl`. UI strings default to English (`today` is localised through `Intl.RelativeTimeFormat`). Override what you need:
+Month and weekday names, the default numeric format, first weekday and direction come from `Intl`. UI strings default to English (`today` is localised through `Intl.RelativeTimeFormat`). The strings are `today clear prevMonth nextMonth label selected` and, for the time selector, `time hours minutes seconds`. Override what you need:
 
 ```ts
 new Datepicker(input, { locale: { code: 'de', clear: 'Löschen', prevMonth: 'Voriger Monat', nextMonth: 'Nächster Monat', label: 'Datum wählen', selected: 'Ausgewählt' } });
@@ -172,7 +241,7 @@ Current Chrome, Firefox, Safari (14.1+) and Edge. Form association of the Web Co
 
 ## Not in v1 yet
 
-Time picker, presets and a year / month picker view are not implemented. Month and year are reachable with the previous / next buttons and `PageUp` / `PageDown` (`Shift` for years).
+Presets and a year / month picker view are not implemented. Month and year are reachable with the previous / next buttons and `PageUp` / `PageDown` (`Shift` for years).
 
 ## Development
 

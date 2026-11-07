@@ -287,6 +287,33 @@
         <output></output>
       </section>
 
+      <section id="datetime">
+        <h2>Date &amp; time</h2>
+        <p>
+          <code>enableTime</code> adds a 24-hour
+          hours&nbsp;:&nbsp;minutes&nbsp;:&nbsp;seconds selector below the
+          calendar (the popup stays open so you can set it). Type
+          <code>15/03/2025 13:07:09</code>, <code>2025-03-15T13:07</code>
+          or paste a timestamp. In a range one time applies to both ends.
+        </p>
+        <label for="datetime-input">Date and time</label>
+        <input
+          type="text"
+          id="datetime-input"
+          placeholder="Pick or type a date and time"
+        />
+        <output id="datetime-out"></output>
+        <label for="datetime-range-input" style="margin-top: 0.75rem"
+          >Date and time range</label
+        >
+        <input
+          type="text"
+          id="datetime-range-input"
+          placeholder="Pick or type a range with times"
+        />
+        <output id="datetime-range-out"></output>
+      </section>
+
       <section id="inline">
         <h2>Inline</h2>
         <p>
@@ -415,6 +442,17 @@
               ></x-datepicker>
               <output data-for="birthday"></output>
             </div>
+            <div>
+              <x-datepicker
+                name="meeting"
+                enable-time
+                label="Meeting"
+                locale="en-GB"
+                placeholder="Meeting"
+                value="2025-03-15T13:07:09"
+              ></x-datepicker>
+              <output data-for="meeting"></output>
+            </div>
             <button type="submit">Submit</button>
             <button type="reset">Reset</button>
           </div>
@@ -437,31 +475,40 @@
       import { Datepicker } from "../dist/index.js";
       import { withRange } from "../dist/range.js";
       import { withMultiple } from "../dist/multiple.js";
+      import { withTime } from "../dist/time.js";
       import "../dist/locales/uk.js";
       import "../dist/wc.js";
 
       const $ = (s, r = document) => r.querySelector(s);
       const pad = (n) => String(n).padStart(2, "0");
-      const iso = (d) =>
-        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-      // A Date reads as 2026-11-07; a Unix timestamp (outputTimestamp) as 1794074400 (2026-11-07).
-      const stamp = (seconds) =>
-        `${seconds} (${iso(new Date(seconds * 1000))})`;
-      const one = (d) => (typeof d === "number" ? stamp(d) : iso(d));
-      const show = (v) =>
-        v == null ? "none" : Array.isArray(v) ? v.map(one).join(", ") : one(v);
+      const hms = (d) =>
+        `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      // A Date reads as 2026-11-07 (2026-11-07 13:07:09 with a time selector).
+      const iso = (d, time = false) =>
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}${time ? ` ${hms(d)}` : ""}`;
+      // A Unix timestamp (outputTimestamp) reads as 1794074400 (2026-11-07).
+      const stamp = (seconds, time) =>
+        `${seconds} (${iso(new Date(seconds * 1000), time)})`;
+      const one = (d, time) =>
+        typeof d === "number" ? stamp(d, time) : iso(d, time);
+      const show = (v, time) =>
+        v == null
+          ? "none"
+          : Array.isArray(v)
+            ? v.map((d) => one(d, time)).join(", ")
+            : one(v, time);
       // <x-datepicker>.value is a string: "2025-03-10/2025-03-14" or, with output-timestamp, "1741996800/1742428800".
-      const valueText = (s) =>
+      const valueText = (s, time) =>
         s
           ? s
               .split(/([/,])/)
-              .map((p) => (/^\d+$/.test(p) ? stamp(+p) : p))
+              .map((p) => (/^\d+$/.test(p) ? stamp(+p, time) : p))
               .join("")
           : "none";
       const wcUpdate = () =>
         document.querySelectorAll("x-datepicker").forEach((el) => {
           $(`output[data-for=${el.getAttribute("name")}]`).textContent =
-            `value: ${valueText(el.value)}`;
+            `value: ${valueText(el.value, el.hasAttribute("enable-time"))}`;
         });
       const today = () => {
         const d = new Date();
@@ -470,27 +517,29 @@
 
       const entries = [];
       const logEl = $("#log");
-      const log = (name, type, detail) => {
+      const log = (name, type, detail, time = false) => {
         const li = document.createElement("li");
         const text =
           detail === undefined || detail === null
             ? ""
             : " " +
               (Array.isArray(detail)
-                ? detail.map(one).join(" – ")
+                ? detail.map((d) => one(d, time)).join(" – ")
                 : detail instanceof Date || typeof detail === "number"
-                  ? one(detail)
+                  ? one(detail, time)
                   : detail);
         li.textContent = `${new Date().toLocaleTimeString()}  ${name}: ${type}${text}`;
         logEl.prepend(li);
         while (logEl.children.length > 8) logEl.lastChild.remove();
       };
-      const readout = (out, dp) => () => {
-        out.textContent = `getDate(): ${show(dp.getDate())}`;
-      };
+      const readout =
+        (out, dp, time = false) =>
+        () => {
+          out.textContent = `getDate(): ${show(dp.getDate(), time)}`;
+        };
       // Registers an instance. `mode` is a function because some demos switch mode at runtime;
       // `update` refreshes the section's readout (on change, and after the backend field sets a value).
-      const track = (name, dp, mode, update) => {
+      const track = (name, dp, mode, update, time = false) => {
         entries.push({ dp, mode, update });
         for (const type of [
           "change",
@@ -501,7 +550,7 @@
         ]) {
           dp.addEventListener(type, (e) => {
             if (type === "change") update();
-            log(name, type, e.detail);
+            log(name, type, e.detail, time);
           });
         }
         update();
@@ -567,6 +616,34 @@
           dp,
           () => "multiple",
           readout($("output", $("#multiple")), dp),
+        );
+      }
+
+      // ---- date & time
+      {
+        const dp = withTime(
+          new Datepicker($("#datetime-input"), { locale: "en-GB" }),
+        );
+        track(
+          "datetime",
+          dp,
+          () => "single",
+          readout($("#datetime-out"), dp, true),
+          true,
+        );
+
+        const range = withRange(
+          new Datepicker($("#datetime-range-input"), {
+            locale: "en-GB",
+            enableTime: true,
+          }),
+        );
+        track(
+          "datetime range",
+          range,
+          () => "range",
+          readout($("#datetime-range-out"), range, true),
+          true,
         );
       }
 
@@ -656,7 +733,12 @@
         for (const el of form.querySelectorAll("x-datepicker")) {
           for (const type of ["change", "open", "close"])
             el.addEventListener(type, (e) =>
-              log(el.getAttribute("name"), type, e.detail),
+              log(
+                el.getAttribute("name"),
+                type,
+                e.detail,
+                el.hasAttribute("enable-time"),
+              ),
             );
           el.addEventListener("change", wcUpdate);
         }
@@ -674,7 +756,7 @@
         const MONTHS = "jan feb mar apr may jun jul aug sep oct nov dec".split(
           " ",
         );
-        // ISO, day-first dd.mm.yyyy / dd/mm/yyyy, "Mar 15, 2025", or a 9-11 digit Unix timestamp (seconds).
+        // ISO, day-first dd.mm.yyyy / dd/mm/yyyy, "Mar 15, 2025" (each optionally followed by a time), or a 9-11 digit Unix timestamp (seconds).
         // Scanning the text means the comma between two dates (and the one inside "Mar 15, 2025") needs no special handling.
         const DATE_RE =
           /(\d{4})-(\d{1,2})-(\d{1,2})|(\d{1,2})[./](\d{1,2})[./](\d{4})|([A-Za-z]{3,})\.?\s+(\d{1,2}),?\s+(\d{4})|\b(\d{9,11})\b/g;
@@ -682,8 +764,7 @@
           const dates = [];
           for (const m of text.matchAll(DATE_RE)) {
             if (m[10]) {
-              const t = new Date(+m[10] * 1000); // the pickers keep the local day of the instant
-              dates.push(new Date(t.getFullYear(), t.getMonth(), t.getDate()));
+              dates.push(new Date(+m[10] * 1000)); // date-only pickers keep just the local day of the instant
               continue;
             }
             const [y, mo, d] = m[1]
@@ -702,6 +783,11 @@
               date.getDate() !== +d
             )
               return null; // e.g. 31.02 or an unknown month
+            // An optional time right after the date: "15.03.2025 13:07:09", "2025-03-15T13:07".
+            const t = /^[T\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(
+              text.slice(m.index + m[0].length),
+            );
+            if (t) date.setHours(+t[1], +t[2], +(t[3] ?? 0));
             dates.push(date);
           }
           return dates.length ? dates : null;
@@ -736,7 +822,11 @@
             const mode = el.getAttribute("mode") || "single";
             const value = valueFor[mode](dates);
             if (!value) continue;
-            el.value = [].concat(value).map(iso).join(wcSeparator[mode]);
+            const time = el.hasAttribute("enable-time");
+            el.value = []
+              .concat(value)
+              .map((d) => (time ? `${iso(d)}T${hms(d)}` : iso(d)))
+              .join(wcSeparator[mode]);
             updated++;
           }
           wcUpdate();

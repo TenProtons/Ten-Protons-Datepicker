@@ -40,6 +40,10 @@
 .tp-range-start.tp-range-end{border-radius:var(--tp-radius)}
 .tp-selected,.tp-selected:hover{background:var(--tp-accent);color:var(--tp-accent-fg)}
 
+.tp-time{display:flex;align-items:center;justify-content:center;gap:.25rem;margin-top:.5rem;padding-top:.5rem;border-top:1px solid var(--tp-border)}
+.tp-time-field{width:2.5rem;padding:.25rem;border:1px solid var(--tp-border);border-radius:var(--tp-radius);background:var(--tp-bg);color:inherit;font:inherit;text-align:center;font-variant-numeric:tabular-nums}
+.tp-time-field:focus-visible{outline:2px solid var(--tp-focus);outline-offset:1px}
+
 .tp-foot{display:flex;justify-content:space-between;margin-top:.5rem}
 .tp-btn{padding:.25rem .5rem;border:0;border-radius:var(--tp-radius);background:none;color:var(--tp-accent);font:inherit;cursor:pointer}
 .tp-btn:hover{background:var(--tp-hover)}

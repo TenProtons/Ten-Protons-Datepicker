@@ -10,6 +10,10 @@ export const uk: LocaleObject = {
   nextMonth: 'Наступний місяць',
   label: 'Оберіть дату',
   selected: 'Обрано',
+  time: 'Час',
+  hours: 'Години',
+  minutes: 'Хвилини',
+  seconds: 'Секунди',
 };
 
 registerLocale(uk);

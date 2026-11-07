@@ -30,6 +30,10 @@ const EN: LocaleStrings = {
   nextMonth: 'Next month',
   label: 'Choose date',
   selected: 'Selected',
+  time: 'Time',
+  hours: 'Hours',
+  minutes: 'Minutes',
+  seconds: 'Seconds',
 };
 
 // Always the Gregorian calendar, so `ar-SA` / `th-TH` don't silently switch calendar systems.

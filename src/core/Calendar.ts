@@ -1,6 +1,7 @@
 import { addDays, addMonths, dayKey, fromKey } from './Day';
 import { nextFocus } from './keyboard';
 import type { Locale } from './localization';
+import type { Time, TimeUI, TimeUIFactory } from './time';
 import type { ClassNames } from './types';
 
 export const CLASSES: ClassNames = {
@@ -22,6 +23,8 @@ export const CLASSES: ClassNames = {
   rangeEnd: 'tp-range-end',
   foot: 'tp-foot',
   btn: 'tp-btn',
+  time: 'tp-time',
+  timeField: 'tp-time-field',
   sr: 'tp-sr',
 };
 
@@ -34,6 +37,8 @@ export interface CalendarHandlers {
   today(): void;
   clear(): void;
   close(): void;
+  /** The time selector changed. */
+  time(time: Time): void;
 }
 
 export interface CalendarOptions {
@@ -44,6 +49,8 @@ export interface CalendarOptions {
   otherMonths: boolean;
   inline: boolean;
   theme?: string;
+  /** Builds the time selector below the months (`enableTime`). */
+  time?: TimeUIFactory;
   on: CalendarHandlers;
 }
 
@@ -59,6 +66,8 @@ export interface ViewState {
   /** `span` is a hover preview of an unfinished selection. */
   preview: boolean;
   today: number;
+  /** Time of day shown by the time selector. */
+  time: Time;
   disabled(d: Date): boolean;
   canPrev: boolean;
   canNext: boolean;
@@ -103,6 +112,7 @@ export class Calendar {
   private next: HTMLElement;
   private layoutKey = -1;
   private focusTd: HTMLElement | null = null;
+  private timeUI: TimeUI | undefined;
 
   constructor(private o: CalendarOptions) {
     const { loc, cls, on } = o;
@@ -124,7 +134,8 @@ export class Calendar {
       foot.append(b);
     }
     this.live = h('div', cls.sr, { 'aria-live': 'polite', 'aria-atomic': 'true' });
-    root.append(months, foot, this.live);
+    this.timeUI = o.time?.({ loc, cls, id: o.id, change: on.time });
+    root.append(months, ...(this.timeUI ? [this.timeUI.el] : []), foot, this.live);
     this.prev = root.querySelector<HTMLElement>('[data-a=prev]')!;
     this.next = root.querySelector<HTMLElement>('[data-a=next]')!;
 
@@ -258,6 +269,7 @@ export class Calendar {
       }
     }
     // aria-disabled (not `disabled`) so the buttons never drop focus at the limits.
+    this.timeUI?.set(s.time);
     attr(this.prev, 'aria-disabled', s.canPrev ? null : 'true');
     attr(this.next, 'aria-disabled', s.canNext ? null : 'true');
   }
@@ -287,7 +299,7 @@ export class Calendar {
 
   /** aria-modal: Tab wraps inside the dialog. */
   private trapTab(e: KeyboardEvent): void {
-    const f = [...this.el.querySelectorAll<HTMLElement>('button, td[tabindex="0"]')];
+    const f = [...this.el.querySelectorAll<HTMLElement>('button, input, td[tabindex="0"]')];
     const [first, last] = [f[0], f[f.length - 1]];
     const edge = e.shiftKey ? first : last;
     if (e.target === edge || !f.includes(e.target as HTMLElement)) {
