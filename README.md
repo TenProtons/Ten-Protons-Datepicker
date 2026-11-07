@@ -10,15 +10,15 @@ Zero-dependency, accessible, framework-agnostic datepicker. Vanilla TypeScript +
 - ESM only, strict TypeScript types, no runtime dependencies
 
 ```sh
-npm i @ten-protons/datepicker
+npm i ten-protons-datepicker
 ```
 
 ## Web Component
 
 ```html
 <script type="module">
-  import '@ten-protons/datepicker/wc';
-  import '@ten-protons/datepicker/locales/uk'; // optional UI strings for locale="uk"
+  import 'ten-protons-datepicker/wc';
+  import 'ten-protons-datepicker/locales/uk'; // optional UI strings for locale="uk"
 </script>
 
 <x-datepicker name="period" mode="range" locale="uk" min="2025-01-01" label="Period"></x-datepicker>
@@ -46,10 +46,10 @@ Style with `::part(input)`, `::part(toggle)` and the `--tp-*` variables.
 ## Imperative API
 
 ```ts
-import { Datepicker } from '@ten-protons/datepicker';
-import { withRange } from '@ten-protons/datepicker/range';
-import '@ten-protons/datepicker/core.css';
-import '@ten-protons/datepicker/themes.css';
+import { Datepicker } from 'ten-protons-datepicker';
+import { withRange } from 'ten-protons-datepicker/range';
+import 'ten-protons-datepicker/core.css';
+import 'ten-protons-datepicker/themes.css';
 
 const dp = withRange(new Datepicker(input, { locale: 'en-GB', minDate: new Date() }));
 
@@ -61,7 +61,7 @@ dp.destroy();
 
 Methods: `open() close() toggle() destroy() getDate() setDate(date, triggerChange?) setOptions(partial) jumpToDate(date) setRange(start, end)`.
 
-`withMultiple` lives in `@ten-protons/datepicker/multiple`. Without the helpers, import the module for its side effect and pass `mode: 'range'`. Selecting a mode that isn't imported throws a descriptive error.
+`withMultiple` lives in `ten-protons-datepicker/multiple`. Without the helpers, import the module for its side effect and pass `mode: 'range'`. Selecting a mode that isn't imported throws a descriptive error.
 
 With `inline: true` the calendar renders inside the given element (any element, not just an input).
 
@@ -121,7 +121,7 @@ Month and weekday names, the default numeric format, first weekday and direction
 new Datepicker(input, { locale: { code: 'de', clear: 'Löschen', prevMonth: 'Voriger Monat', nextMonth: 'Nächster Monat', label: 'Datum wählen', selected: 'Ausgewählt' } });
 ```
 
-`months`, `monthsShort`, `weekdays`, `weekdaysShort`, `firstDayOfWeek` and `rtl` can be overridden as well. `registerLocale(obj)` makes a locale available by tag (that's how `@ten-protons/datepicker/locales/uk` works).
+`months`, `monthsShort`, `weekdays`, `weekdaysShort`, `firstDayOfWeek` and `rtl` can be overridden as well. `registerLocale(obj)` makes a locale available by tag (that's how `ten-protons-datepicker/locales/uk` works).
 
 The calendar is always Gregorian, and manual input accepts Arabic-Indic and Persian digits.
 

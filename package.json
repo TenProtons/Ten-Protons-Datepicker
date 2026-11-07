@@ -1,5 +1,5 @@
 {
-  "name": "@ten-protons/datepicker",
+  "name": "ten-protons-datepicker",
   "version": "0.1.0",
   "description": "Zero-dependency, accessible, tiny datepicker. Vanilla TypeScript + Web Component.",
   "keywords": ["datepicker", "date-picker", "calendar", "web-component", "a11y", "range", "zero-dependency"],

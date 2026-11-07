@@ -198,7 +198,7 @@ export class Datepicker extends EventTarget {
     const o = { ...DEFAULTS, ...definedOnly(user) };
     const mode = getMode(o.mode!);
     if (!mode) {
-      throw new Error(`[datepicker] mode "${o.mode}" is not registered. Import "@ten-protons/datepicker/${o.mode}" first.`);
+      throw new Error(`[datepicker] mode "${o.mode}" is not registered. Import "ten-protons-datepicker/${o.mode}" first.`);
     }
     this.user = user;
     this.o = o;
