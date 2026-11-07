@@ -48,6 +48,14 @@
   </header>
 
   <main>
+    <section id="backend" class="wide">
+      <h2>Emulated backend response</h2>
+      <p>Paste a date string here as if it came from an API, to test how the pickers below parse and display it. One date (<code>2025-03-15</code>, <code>15.03.2025</code>, <code>Mar 15, 2025</code>) updates every <strong>single</strong> picker; two dates (<code>2025-03-10, 2025-03-20</code>) update every <strong>range</strong> picker; any number of dates updates every <strong>multiple</strong> picker. <code>dd.mm.yyyy</code> and <code>dd/mm/yyyy</code> are read day-first.</p>
+      <label for="backend-input">Backend value</label>
+      <input type="text" id="backend-input" placeholder="2025-03-15  ·  15.03.2025  ·  Mar 15, 2025  ·  2025-03-10, 2025-03-20" autocomplete="off" spellcheck="false">
+      <output id="backend-status">Waiting for a value…</output>
+    </section>
+
     <section id="single">
       <h2>Single date</h2>
       <p>Click the field, or focus it and press <kbd>↓</kbd>. In the calendar use arrows, <kbd>PageUp</kbd>/<kbd>PageDown</kbd> (<kbd>Shift</kbd> = year), <kbd>Home</kbd>/<kbd>End</kbd>, <kbd>Enter</kbd>, <kbd>Esc</kbd>.</p>
@@ -174,7 +182,7 @@
     const show = (v) => (v == null ? 'none' : Array.isArray(v) ? v.map(iso).join(', ') : iso(v));
     const today = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); };
 
-    const pickers = [];
+    const entries = [];
     const logEl = $('#log');
     const log = (name, type, detail) => {
       const li = document.createElement('li');
@@ -183,10 +191,11 @@
       logEl.prepend(li);
       while (logEl.children.length > 8) logEl.lastChild.remove();
     };
-    // Registers an instance: mirrors its value into the section's <output> and logs its events.
-    const track = (name, dp, out) => {
-      pickers.push(dp);
-      const update = () => { if (out) out.textContent = `getDate(): ${show(dp.getDate())}`; };
+    const readout = (out, dp) => () => { out.textContent = `getDate(): ${show(dp.getDate())}`; };
+    // Registers an instance. `mode` is a function because some demos switch mode at runtime;
+    // `update` refreshes the section's readout (on change, and after the backend field sets a value).
+    const track = (name, dp, mode, update) => {
+      entries.push({ dp, mode, update });
       for (const type of ['change', 'open', 'close', 'monthChange', 'yearChange']) {
         dp.addEventListener(type, (e) => { if (type === 'change') update(); log(name, type, e.detail); });
       }
@@ -197,7 +206,8 @@
     // ---- single
     {
       const sec = $('#single'), input = $('#single-input');
-      const dp = track('single', new Datepicker(input, { locale: 'en-GB' }), $('output', sec));
+      const dp = new Datepicker(input, { locale: 'en-GB' });
+      track('single', dp, () => 'single', readout($('output', sec), dp));
       sec.addEventListener('change', (e) => {
         if (!e.target.dataset.opt) return;
         const on = (k) => $(`[data-opt=${k}]`, sec).checked;
@@ -213,52 +223,62 @@
     // ---- range
     {
       const sec = $('#range');
-      const dp = track('range', withRange(new Datepicker($('#range-input'), { locale: 'en-GB', numberOfMonths: 2 })), $('output', sec));
+      const dp = withRange(new Datepicker($('#range-input'), { locale: 'en-GB', numberOfMonths: 2 }));
+      const update = readout($('output', sec), dp);
+      track('range', dp, () => 'range', update);
       sec.addEventListener('change', (e) => { if (e.target.dataset.opt === 'two') dp.setOptions({ numberOfMonths: e.target.checked ? 2 : 1 }); });
       $('[data-action=week]', sec).addEventListener('click', () => {
         const start = today(), end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
         dp.setRange(start, end);
         dp.jumpToDate(start);
-        $('output', sec).textContent = `getDate(): ${show(dp.getDate())}`;
+        update();
       });
     }
 
     // ---- multiple
-    track('multiple', withMultiple(new Datepicker($('#multiple-input'), { locale: 'en-GB', showOtherMonths: true })), $('output', $('#multiple')));
+    {
+      const dp = withMultiple(new Datepicker($('#multiple-input'), { locale: 'en-GB', showOtherMonths: true }));
+      track('multiple', dp, () => 'multiple', readout($('output', $('#multiple')), dp));
+    }
 
     // ---- inline (one instance, switch mode at runtime)
     {
       const sec = $('#inline');
-      const dp = track('inline', new Datepicker($('#inline-host'), { inline: true, locale: 'en-GB' }), $('output', sec));
+      let mode = 'single';
+      const dp = new Datepicker($('#inline-host'), { inline: true, locale: 'en-GB' });
+      const update = readout($('output', sec), dp);
+      track('inline', dp, () => mode, update);
       sec.addEventListener('change', (e) => {
         if (e.target.name !== 'inline-mode') return;
-        dp.setOptions({ mode: e.target.value, selected: null });
-        $('output', sec).textContent = `getDate(): ${show(dp.getDate())}`;
+        mode = e.target.value;
+        dp.setOptions({ mode, selected: null });
+        update();
       });
     }
 
     // ---- locales
     {
       const sec = $('#locales'), select = $('#locale');
-      const dp = track('locale', new Datepicker($('#locale-input'), { locale: select.value, numberOfMonths: 2, defaultDate: new Date() }), $('output', sec));
+      const dp = new Datepicker($('#locale-input'), { locale: select.value, numberOfMonths: 2, defaultDate: new Date() });
+      track('locale', dp, () => 'single', readout($('output', sec), dp));
       select.addEventListener('change', () => dp.setOptions({ locale: select.value }));
     }
 
     // ---- manual entry
     {
       const input = $('#manual-input'), out = $('#manual-status'), isoEl = $('#manual-iso');
-      const dp = track('manual', new Datepicker(input, {
+      const dp = new Datepicker(input, {
         locale: 'en-GB',
         minDate: '2025-01-01',
         maxDate: '2026-12-31',
         disabledDaysOfWeek: [0],
         isoInput: isoEl,
-      }), null);
+      });
       const status = () => {
         if (input.getAttribute('aria-invalid') === 'true') out.textContent = `✗ "${input.value}" is not a valid, enabled date for this format`;
         else out.textContent = `✓ getDate(): ${show(dp.getDate())}   ·   isoInput: "${isoEl.value}"`;
       };
-      dp.addEventListener('change', status);
+      track('manual', dp, () => $('#manual-mode').value, status);
       input.addEventListener('keydown', (e) => { if (e.key === 'Enter') setTimeout(status); });
       input.addEventListener('blur', () => setTimeout(status));
       $('#format').addEventListener('change', (e) => { dp.setOptions({ dateFormat: e.target.value || undefined }); status(); });
@@ -280,11 +300,64 @@
       }
     }
 
+    // ---- emulated backend response: parse the text, then push it into every picker whose mode fits
+    {
+      const input = $('#backend-input'), status = $('#backend-status');
+      const MONTHS = 'jan feb mar apr may jun jul aug sep oct nov dec'.split(' ');
+      // ISO, day-first dd.mm.yyyy / dd/mm/yyyy, or "Mar 15, 2025". Scanning the text means the comma
+      // between two dates (and the one inside "Mar 15, 2025") needs no special handling.
+      const DATE_RE = /(\d{4})-(\d{1,2})-(\d{1,2})|(\d{1,2})[./](\d{1,2})[./](\d{4})|([A-Za-z]{3,})\.?\s+(\d{1,2}),?\s+(\d{4})/g;
+      const parseDates = (text) => {
+        const dates = [];
+        for (const m of text.matchAll(DATE_RE)) {
+          const [y, mo, d] = m[1] ? [m[1], m[2], m[3]] : m[4] ? [m[6], m[5], m[4]] : [m[9], MONTHS.indexOf(m[7].slice(0, 3).toLowerCase()) + 1, m[8]];
+          const date = new Date(+y, mo - 1, +d);
+          if (date.getFullYear() !== +y || date.getMonth() !== mo - 1 || date.getDate() !== +d) return null; // e.g. 31.02 or an unknown month
+          dates.push(date);
+        }
+        return dates.length ? dates : null;
+      };
+      // What each mode takes from the parsed dates (null = leave that picker alone).
+      const valueFor = {
+        single: (dates) => (dates.length === 1 ? dates[0] : null),
+        range: (dates) => (dates.length === 2 ? dates : null),
+        multiple: (dates) => dates,
+      };
+      const wcSeparator = { single: ',', range: '/', multiple: ',' };
+
+      const apply = () => {
+        const text = input.value.trim();
+        const dates = text && parseDates(text);
+        input.setAttribute('aria-invalid', String(!!text && !dates));
+        if (!text || !dates) {
+          status.textContent = text ? `✗ No valid date found in "${text}"` : 'Waiting for a value…';
+          return;
+        }
+        let updated = 0;
+        for (const { dp, mode, update } of entries) {
+          const value = valueFor[mode()](dates);
+          if (!value) continue;
+          dp.setDate(value);
+          update();
+          updated++;
+        }
+        for (const el of document.querySelectorAll('x-datepicker')) {
+          const mode = el.getAttribute('mode') || 'single';
+          const value = valueFor[mode](dates);
+          if (!value) continue;
+          el.value = [].concat(value).map(iso).join(wcSeparator[mode]);
+          updated++;
+        }
+        status.textContent = `✓ Parsed ${dates.length} date${dates.length > 1 ? 's' : ''} (${show(dates)}) · updated ${updated} picker${updated === 1 ? '' : 's'}`;
+      };
+      input.addEventListener('input', apply);
+    }
+
     // ---- theme
     $('#theme').addEventListener('change', (e) => {
       const theme = e.target.value;
       theme ? document.documentElement.setAttribute('data-theme', theme) : document.documentElement.removeAttribute('data-theme');
-      pickers.forEach((dp) => dp.setOptions({ theme: theme || undefined }));
+      entries.forEach(({ dp }) => dp.setOptions({ theme: theme || undefined }));
       document.querySelectorAll('x-datepicker').forEach((el) => (theme ? el.setAttribute('theme', theme) : el.removeAttribute('theme')));
     });
   </script>
