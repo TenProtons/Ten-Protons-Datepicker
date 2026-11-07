@@ -24,7 +24,8 @@ registerTimeUI(({ loc, cls, change }) => {
   FIELDS.forEach(([name, max], i) => {
     const input = document.createElement('input');
     input.className = cls.timeField;
-    const attrs = { type: 'text', inputmode: 'numeric', maxlength: '2', autocomplete: 'off', role: 'spinbutton', 'aria-label': loc.strings[name], 'aria-valuemin': '0', 'aria-valuemax': String(max) };
+    // size 2: a text input's default intrinsic width (20 characters) would otherwise widen the popup past the calendar.
+    const attrs = { type: 'text', inputmode: 'numeric', size: '2', maxlength: '2', autocomplete: 'off', role: 'spinbutton', 'aria-label': loc.strings[name], 'aria-valuemin': '0', 'aria-valuemax': String(max) };
     for (const [k, v] of Object.entries(attrs)) input.setAttribute(k, v);
 
     const render = () => {
