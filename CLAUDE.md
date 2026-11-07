@@ -52,3 +52,18 @@
 - Heavy date libraries (date-fns, dayjs, luxon, moment)
 - Over-engineering and unnecessary configuration options
 - Breaking changes without discussion
+
+## Publishing Goal
+
+This library must be published to npm as a proper, installable package.
+
+Key requirements:
+
+- Clean and correct `package.json` (exports, types, sideEffects, files field, etc.)
+- Support both ESM and CJS if needed (or pure ESM if we decide so)
+- Excellent tree-shaking
+- Minimal published size
+- Good TypeScript support out of the box
+- Clear README aimed at npm users
+
+The agent should actively help prepare the project for publishing, but the actual `npm publish` command will be executed by the user.
