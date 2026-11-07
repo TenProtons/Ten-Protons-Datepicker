@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ten Protons Datepicker – demo</title>
+  <link rel="stylesheet" href="../dist/core.css">
+  <link rel="stylesheet" href="../dist/themes.css">
+  <style>
+    :root { color-scheme: light dark; --bg: #f6f8fa; --card: #fff; --fg: #1f2328; --muted: #656d76; --line: #d0d7de; --accent: #2563eb; }
+    :root[data-theme=dark] { color-scheme: dark; }
+    :root[data-theme=light] { color-scheme: light; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme=light]) { --bg: #0d1117; --card: #161b22; --fg: #e6edf3; --muted: #8d96a0; --line: #30363d; --accent: #4c8dff; } }
+    :root[data-theme=dark] { --bg: #0d1117; --card: #161b22; --fg: #e6edf3; --muted: #8d96a0; --line: #30363d; --accent: #4c8dff; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
+    header, main { max-width: 64rem; margin: 0 auto; padding: 0 1rem; }
+    header { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; padding-block: 1.5rem 1rem; }
+    h1 { margin: 0; font-size: 1.5rem; }
+    h2 { margin: 0 0 .25rem; font-size: 1.1rem; }
+    p { margin: 0 0 .75rem; color: var(--muted); font-size: .9rem; }
+    main { display: grid; grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr)); gap: 1rem; padding-bottom: 3rem; }
+    section { background: var(--card); border: 1px solid var(--line); border-radius: .75rem; padding: 1rem; min-width: 0; }
+    section.wide { grid-column: 1 / -1; }
+    label { display: block; margin-bottom: .25rem; font-size: .85rem; font-weight: 600; }
+    .row { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; margin: .5rem 0; font-size: .9rem; }
+    .row label { display: inline-flex; gap: .35rem; align-items: center; margin: 0; font-weight: 400; }
+    input[type=text], select { width: 100%; padding: .5rem .75rem; font: inherit; color: inherit; background: var(--card); border: 1px solid var(--line); border-radius: .5rem; }
+    select { width: auto; }
+    input[aria-invalid=true] { border-color: #d1242f; outline-color: #d1242f; }
+    output { display: block; margin-top: .5rem; padding: .4rem .6rem; border-radius: .4rem; background: var(--bg); color: var(--muted); font: .8rem/1.4 ui-monospace, monospace; overflow-wrap: anywhere; }
+    .inline-wrap { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; }
+    ol { margin: 0; padding-left: 1.25rem; font: .8rem/1.5 ui-monospace, monospace; color: var(--muted); }
+    kbd { padding: 0 .3rem; border: 1px solid var(--line); border-radius: .25rem; font-size: .8em; }
+    #wc-form-out { white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Ten Protons Datepicker</h1>
+      <p style="margin:0">Zero-dependency · accessible · Vanilla TS + Web Component</p>
+    </div>
+    <div class="row" style="margin:0">
+      <label for="theme">Theme</label>
+      <select id="theme"><option value="">Auto (system)</option><option value="light">Light</option><option value="dark">Dark</option></select>
+    </div>
+  </header>
+
+  <main>
+    <section id="single">
+      <h2>Single date</h2>
+      <p>Click the field, or focus it and press <kbd>↓</kbd>. In the calendar use arrows, <kbd>PageUp</kbd>/<kbd>PageDown</kbd> (<kbd>Shift</kbd> = year), <kbd>Home</kbd>/<kbd>End</kbd>, <kbd>Enter</kbd>, <kbd>Esc</kbd>.</p>
+      <label for="single-input">Date</label>
+      <input type="text" id="single-input" placeholder="Pick or type a date">
+      <div class="row">
+        <label><input type="checkbox" data-opt="weekends"> Disable weekends</label>
+        <label><input type="checkbox" data-opt="future"> Only today and later</label>
+        <label><input type="checkbox" data-opt="other"> Show other months</label>
+        <label><input type="checkbox" data-opt="two"> Two months</label>
+      </div>
+      <output></output>
+    </section>
+
+    <section id="range">
+      <h2>Range</h2>
+      <p>Click a start, then an end – hover to preview. <kbd>Esc</kbd> mid-pick keeps the previous range.</p>
+      <label for="range-input">Period</label>
+      <input type="text" id="range-input" placeholder="Pick or type a range">
+      <div class="row">
+        <label><input type="checkbox" data-opt="two" checked> Two months</label>
+        <button type="button" data-action="week">Set next 7 days</button>
+      </div>
+      <output></output>
+    </section>
+
+    <section id="multiple">
+      <h2>Multiple dates</h2>
+      <p>Each click toggles a day; the calendar stays open. Click outside to close.</p>
+      <label for="multiple-input">Dates</label>
+      <input type="text" id="multiple-input" placeholder="Pick several dates">
+      <output></output>
+    </section>
+
+    <section id="inline">
+      <h2>Inline</h2>
+      <p>Always visible. Use the buttons to change mode on the same instance.</p>
+      <div class="row">
+        <label><input type="radio" name="inline-mode" value="single" checked> Single</label>
+        <label><input type="radio" name="inline-mode" value="range"> Range</label>
+        <label><input type="radio" name="inline-mode" value="multiple"> Multiple</label>
+      </div>
+      <div class="inline-wrap"><div id="inline-host"></div></div>
+      <output></output>
+    </section>
+
+    <section id="locales" class="wide">
+      <h2>Locales</h2>
+      <p>Month and weekday names, first day of the week, default input format and text direction all come from <code>Intl</code>. Ukrainian also has translated UI strings; the other locales use the English ones.</p>
+      <div class="row">
+        <label for="locale">Locale</label>
+        <select id="locale">
+          <option value="en-US">English (US) – week starts Sunday</option>
+          <option value="en-GB">English (UK)</option>
+          <option value="uk" selected>Українська</option>
+          <option value="de-DE">Deutsch</option>
+          <option value="fr-FR">Français</option>
+          <option value="es-ES">Español</option>
+          <option value="ja-JP">日本語</option>
+          <option value="sv-SE">Svenska (yyyy-MM-dd)</option>
+          <option value="ar-EG">العربية (RTL)</option>
+          <option value="he-IL">עברית (RTL)</option>
+        </select>
+      </div>
+      <label for="locale-input">Date</label>
+      <input type="text" id="locale-input" placeholder="Pick a date" style="max-width:22rem">
+      <output></output>
+    </section>
+
+    <section id="manual" class="wide">
+      <h2>Manual entry</h2>
+      <p>Type a date and press <kbd>Enter</kbd> or leave the field. Separators are matched leniently (try <code>5/3/2025</code> with <code>dd.MM.yyyy</code>), ISO is always accepted, and dates outside min/max or on disabled days are rejected: <kbd>Enter</kbd> marks the field invalid, blur restores the last valid value. Allowed range here: 2025-01-01 … 2026-12-31, no Sundays.</p>
+      <div class="row">
+        <label for="format">Format</label>
+        <select id="format">
+          <option value="">Locale default</option>
+          <option value="dd.MM.yyyy">dd.MM.yyyy</option>
+          <option value="MM/dd/yyyy">MM/dd/yyyy</option>
+          <option value="yyyy-MM-dd">yyyy-MM-dd</option>
+          <option value="d MMMM yyyy">d MMMM yyyy</option>
+          <option value="EEE, MMM d, yyyy">EEE, MMM d, yyyy</option>
+        </select>
+        <label for="manual-mode">Mode</label>
+        <select id="manual-mode"><option>single</option><option>range</option><option>multiple</option></select>
+        <label><input type="checkbox" id="allow-input" checked> allowInput</label>
+      </div>
+      <label for="manual-input">Date</label>
+      <input type="text" id="manual-input" placeholder="Type a date" style="max-width:26rem" autocomplete="off">
+      <input type="hidden" id="manual-iso">
+      <output id="manual-status">Waiting for input…</output>
+    </section>
+
+    <section id="wc" class="wide">
+      <h2>Web Component <code>&lt;x-datepicker&gt;</code></h2>
+      <p>Same engine, no JavaScript needed. <code>mode="range"</code> loads the range module on demand. Submitting the form shows the ISO values (form association needs Safari 16.4+).</p>
+      <form id="wc-form">
+        <div class="row">
+          <x-datepicker name="trip" mode="range" locale="uk" label="Trip dates" placeholder="Період поїздки" value="2025-03-10/2025-03-14"></x-datepicker>
+          <x-datepicker name="birthday" label="Birthday" locale="en-GB" max="2026-12-31" placeholder="Birthday"></x-datepicker>
+          <button type="submit">Submit</button>
+          <button type="reset">Reset</button>
+        </div>
+        <output id="wc-form-out">Form data appears here.</output>
+      </form>
+    </section>
+
+    <section class="wide">
+      <h2>Event log</h2>
+      <p>Latest <code>change</code>, <code>open</code>, <code>close</code>, <code>monthChange</code> and <code>yearChange</code> events from every instance above.</p>
+      <ol id="log"></ol>
+    </section>
+  </main>
+
+  <script type="module">
+    import { Datepicker } from '../dist/index.js';
+    import { withRange } from '../dist/range.js';
+    import { withMultiple } from '../dist/multiple.js';
+    import '../dist/locales/uk.js';
+    import '../dist/wc.js';
+
+    const $ = (s, r = document) => r.querySelector(s);
+    const pad = (n) => String(n).padStart(2, '0');
+    const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const show = (v) => (v == null ? 'none' : Array.isArray(v) ? v.map(iso).join(', ') : iso(v));
+    const today = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); };
+
+    const pickers = [];
+    const logEl = $('#log');
+    const log = (name, type, detail) => {
+      const li = document.createElement('li');
+      const text = detail === undefined || detail === null ? '' : ' ' + (Array.isArray(detail) ? detail.map(iso).join(' – ') : detail instanceof Date ? iso(detail) : detail);
+      li.textContent = `${new Date().toLocaleTimeString()}  ${name}: ${type}${text}`;
+      logEl.prepend(li);
+      while (logEl.children.length > 8) logEl.lastChild.remove();
+    };
+    // Registers an instance: mirrors its value into the section's <output> and logs its events.
+    const track = (name, dp, out) => {
+      pickers.push(dp);
+      const update = () => { if (out) out.textContent = `getDate(): ${show(dp.getDate())}`; };
+      for (const type of ['change', 'open', 'close', 'monthChange', 'yearChange']) {
+        dp.addEventListener(type, (e) => { if (type === 'change') update(); log(name, type, e.detail); });
+      }
+      update();
+      return dp;
+    };
+
+    // ---- single
+    {
+      const sec = $('#single'), input = $('#single-input');
+      const dp = track('single', new Datepicker(input, { locale: 'en-GB' }), $('output', sec));
+      sec.addEventListener('change', (e) => {
+        if (!e.target.dataset.opt) return;
+        const on = (k) => $(`[data-opt=${k}]`, sec).checked;
+        dp.setOptions({
+          disabledDaysOfWeek: on('weekends') ? [0, 6] : undefined,
+          minDate: on('future') ? today() : null,
+          showOtherMonths: on('other'),
+          numberOfMonths: on('two') ? 2 : 1,
+        });
+      });
+    }
+
+    // ---- range
+    {
+      const sec = $('#range');
+      const dp = track('range', withRange(new Datepicker($('#range-input'), { locale: 'en-GB', numberOfMonths: 2 })), $('output', sec));
+      sec.addEventListener('change', (e) => { if (e.target.dataset.opt === 'two') dp.setOptions({ numberOfMonths: e.target.checked ? 2 : 1 }); });
+      $('[data-action=week]', sec).addEventListener('click', () => {
+        const start = today(), end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+        dp.setRange(start, end);
+        dp.jumpToDate(start);
+        $('output', sec).textContent = `getDate(): ${show(dp.getDate())}`;
+      });
+    }
+
+    // ---- multiple
+    track('multiple', withMultiple(new Datepicker($('#multiple-input'), { locale: 'en-GB', showOtherMonths: true })), $('output', $('#multiple')));
+
+    // ---- inline (one instance, switch mode at runtime)
+    {
+      const sec = $('#inline');
+      const dp = track('inline', new Datepicker($('#inline-host'), { inline: true, locale: 'en-GB' }), $('output', sec));
+      sec.addEventListener('change', (e) => {
+        if (e.target.name !== 'inline-mode') return;
+        dp.setOptions({ mode: e.target.value, selected: null });
+        $('output', sec).textContent = `getDate(): ${show(dp.getDate())}`;
+      });
+    }
+
+    // ---- locales
+    {
+      const sec = $('#locales'), select = $('#locale');
+      const dp = track('locale', new Datepicker($('#locale-input'), { locale: select.value, numberOfMonths: 2, defaultDate: new Date() }), $('output', sec));
+      select.addEventListener('change', () => dp.setOptions({ locale: select.value }));
+    }
+
+    // ---- manual entry
+    {
+      const input = $('#manual-input'), out = $('#manual-status'), isoEl = $('#manual-iso');
+      const dp = track('manual', new Datepicker(input, {
+        locale: 'en-GB',
+        minDate: '2025-01-01',
+        maxDate: '2026-12-31',
+        disabledDaysOfWeek: [0],
+        isoInput: isoEl,
+      }), null);
+      const status = () => {
+        if (input.getAttribute('aria-invalid') === 'true') out.textContent = `✗ "${input.value}" is not a valid, enabled date for this format`;
+        else out.textContent = `✓ getDate(): ${show(dp.getDate())}   ·   isoInput: "${isoEl.value}"`;
+      };
+      dp.addEventListener('change', status);
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') setTimeout(status); });
+      input.addEventListener('blur', () => setTimeout(status));
+      $('#format').addEventListener('change', (e) => { dp.setOptions({ dateFormat: e.target.value || undefined }); status(); });
+      $('#allow-input').addEventListener('change', (e) => dp.setOptions({ allowInput: e.target.checked }));
+      $('#manual-mode').addEventListener('change', (e) => { dp.setOptions({ mode: e.target.value, selected: null }); status(); });
+    }
+
+    // ---- web component
+    {
+      const form = $('#wc-form'), out = $('#wc-form-out');
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const data = new FormData(form);
+        const lines = [...data.entries()].map(([k, v]) => `${k} = ${v || '(empty)'}`);
+        out.textContent = lines.length ? lines.join('\n') : 'No form data (this browser has no ElementInternals form association).';
+      });
+      for (const el of form.querySelectorAll('x-datepicker')) {
+        for (const type of ['change', 'open', 'close']) el.addEventListener(type, (e) => log(el.getAttribute('name'), type, e.detail));
+      }
+    }
+
+    // ---- theme
+    $('#theme').addEventListener('change', (e) => {
+      const theme = e.target.value;
+      theme ? document.documentElement.setAttribute('data-theme', theme) : document.documentElement.removeAttribute('data-theme');
+      pickers.forEach((dp) => dp.setOptions({ theme: theme || undefined }));
+      document.querySelectorAll('x-datepicker').forEach((el) => (theme ? el.setAttribute('theme', theme) : el.removeAttribute('theme')));
+    });
+  </script>
+</body>
+</html>

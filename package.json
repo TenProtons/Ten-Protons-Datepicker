@@ -1,0 +1,39 @@
+{
+  "name": "ten-protons-datepicker",
+  "version": "0.1.0",
+  "description": "Zero-dependency, accessible, tiny datepicker. Vanilla TypeScript + Web Component.",
+  "keywords": ["datepicker", "date-picker", "calendar", "web-component", "a11y", "range", "zero-dependency"],
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "./dist/range.js",
+    "./dist/multiple.js",
+    "./dist/wc.js",
+    "./dist/locales/*.js",
+    "*.css"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./range": { "types": "./dist/range.d.ts", "import": "./dist/range.js" },
+    "./multiple": { "types": "./dist/multiple.d.ts", "import": "./dist/multiple.js" },
+    "./wc": { "types": "./dist/wc.d.ts", "import": "./dist/wc.js" },
+    "./locales/uk": { "types": "./dist/locales/uk.d.ts", "import": "./dist/locales/uk.js" },
+    "./core.css": "./dist/core.css",
+    "./themes.css": "./dist/themes.css",
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsup",
+    "demo": "npm run build && npx --yes serve . -l 5173",
+    "prepublishOnly": "npm run typecheck && npm run build"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.0"
+  }
+}
