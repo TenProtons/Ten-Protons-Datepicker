@@ -28,10 +28,10 @@ npm i ten-protons-datepicker
 
 | Attribute | Notes |
 | --- | --- |
-| `value` | ISO: `2025-03-05`, range `2025-03-01/2025-03-10`, multiple `2025-03-01,2025-03-05` |
+| `value` | ISO: `2025-03-05`, range `2025-03-01/2025-03-10`, multiple `2025-03-01,2025-03-05`. Unix timestamps work too; with `output-timestamp` the property returns them. See [Unix timestamps](#unix-timestamps) |
 | `name`, `placeholder`, `label`, `disabled` | `label` is the input's accessible name. Form-associated where `ElementInternals` exists |
 | `mode`, `locale`, `min`, `max`, `date-format`, `first-day`, `position`, `theme` | see [Options](#options) |
-| `number-of-months`, `show-other-months`, `allow-input`, `close-on-select`, `disabled-days`, `inline` | booleans: present = true, `="false"` = false |
+| `number-of-months`, `show-other-months`, `allow-input`, `close-on-select`, `disabled-days`, `output-timestamp`, `inline` | booleans: present = true, `="false"` = false |
 
 ```js
 const el = document.querySelector('x-datepicker');
@@ -55,7 +55,7 @@ const dp = withRange(new Datepicker(input, { locale: 'en-GB', minDate: new Date(
 
 dp.addEventListener('change', (e) => console.log(e.detail)); // or onChange option
 dp.setRange(start, end);
-dp.getDate();    // Date | Date[] | null
+dp.getDate();    // Date | Date[] | null   (numbers with outputTimestamp)
 dp.destroy();
 ```
 
@@ -71,7 +71,7 @@ With `inline: true` the calendar renders inside the given element (any element, 
 | --- | --- | --- |
 | `mode` | `'single'` | `'single' \| 'range' \| 'multiple'` |
 | `selected`, `defaultDate` | | initial value / month shown when empty |
-| `minDate`, `maxDate` | | `Date` or ISO `yyyy-MM-dd` |
+| `minDate`, `maxDate` | | `Date`, ISO `yyyy-MM-dd`, or a Unix timestamp in seconds (`DateInput`; also accepted by `selected`, `setDate`) |
 | `disabledDates`, `disabledDaysOfWeek` | | `Date[]` or `(date) => boolean`; `0` = Sunday |
 | `locale` | browser | BCP 47 tag or a `LocaleObject` |
 | `firstDayOfWeek` | from locale | `0`–`6` |
@@ -83,7 +83,8 @@ With `inline: true` the calendar renders inside the given element (any element, 
 | `closeOnSelect` | `true` (single, range), `false` (multiple) | |
 | `closeOnOutsideClick` | `true` | outside pointer-down or focus |
 | `classes` | | replace any default class name (`ClassNames`) |
-| `isoInput` | | input that receives the ISO value, e.g. a hidden field |
+| `outputTimestamp` | `false` | report Unix timestamps (seconds) instead of `Date`s / ISO strings, see [Unix timestamps](#unix-timestamps) |
+| `isoInput` | | input that receives the ISO value (or the timestamp with `outputTimestamp`), e.g. a hidden field |
 | `anchor`, `appendTo` | input, `document.body` | construction only |
 | `onChange onOpen onClose onMonthChange` | | callbacks; the same events fire as `CustomEvent`s |
 
@@ -98,6 +99,39 @@ Typing is parsed on blur or Enter (ISO is always accepted). Separators are match
 - Empty text clears the selection.
 
 `change` also dispatches native bubbling `input` / `change` events on the input, so `v-model`-style bindings work.
+
+## Unix timestamps
+
+**Input is automatic, with no option.** Type or paste a Unix timestamp in seconds (9–11 digits, e.g. `1794072736`) and the picker converts it: the input shows the date in your `dateFormat` and the calendar jumps to it. Ranges and multiple dates work too (`1741996800 - 1742428800`), and timestamps are also understood in the web component's `value` attribute, in `selected` / `setDate()` / `minDate` / `maxDate` (as a number or a digit string), and in a prefilled input. Anything with fewer digits (like `20250315`) is still treated as a normal date.
+
+**Output is opt-in with `outputTimestamp: true`** (`output-timestamp` on the web component). Everything the picker reports then uses seconds instead of `Date`s / ISO strings:
+
+| | `outputTimestamp: false` (default) | `outputTimestamp: true` |
+| --- | --- | --- |
+| `getDate()`, `onChange`, `change` event `detail` | `Date` / `Date[]` / `null` | `number` / `number[]` / `null` |
+| `isoInput` value, web component `value` and form value | `2025-03-15`, `2025-03-10/2025-03-20` | `1741996800`, `1741996800/1742428800` |
+| text shown in the input | formatted with `dateFormat` | formatted with `dateFormat` (unchanged) |
+
+All four combinations work:
+
+```ts
+const dp = new Datepicker(input, { dateFormat: 'dd.MM.yyyy', outputTimestamp: true, onChange: (ts) => save(ts) });
+
+// timestamp -> timestamp   input "1794072736"   shows 07.11.2026, getDate() = 1794009600
+// formatted -> timestamp   input "07.11.2026"   shows 07.11.2026, getDate() = 1794009600
+// with outputTimestamp: false (default):
+// timestamp -> date        input "1794072736"   shows 07.11.2026, getDate() = Date(2026-11-07)
+// formatted -> date        input "07.11.2026"   shows 07.11.2026, getDate() = Date(2026-11-07)
+```
+
+(Values shown for a browser in UTC; elsewhere the output is that zone's local midnight of 7 November, e.g. `1794002400` in Europe/Kyiv.)
+
+Things to know:
+
+- **Day granularity.** The picker selects days, not instants. A timestamp is converted to the **local** calendar day it falls on, and the timestamp that comes out is the **local midnight** of that day. So `timestamp -> timestamp` normalises the time of day (`1794072736` comes back as `1794009600`), and it is stable from then on: feeding the output back in gives the same value.
+- **Time zones.** "Local" is the browser's time zone, in line with the rest of the picker. A timestamp for UTC midnight (`1741996800` = 2025-03-15T00:00Z) is still March 14 in New York. If your backend stores UTC-midnight timestamps for plain dates, convert them before passing them in.
+- **Seconds only.** Millisecond timestamps (13 digits) are not recognised.
+- **Types.** `DatepickerValue` is `Date | Date[] | number | number[] | null`; narrow it with `typeof` / `instanceof` or check `outputTimestamp` yourself. With the default nothing changes at runtime.
 
 ## Keyboard
 

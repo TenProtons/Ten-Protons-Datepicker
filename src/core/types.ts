@@ -5,8 +5,14 @@ export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export type DatepickerMode = 'single' | 'range' | 'multiple';
 export type Position = 'auto' | 'top' | 'bottom' | 'left' | 'right';
 
-/** `Date` in single mode, `Date[]` in range/multiple mode, `null` when nothing is selected. */
-export type DatepickerValue = Date | Date[] | null;
+/**
+ * What the picker reports: `Date` in single mode, `Date[]` in range/multiple mode, `null` when nothing is
+ * selected. With `outputTimestamp` the dates are Unix timestamps in seconds (`number` / `number[]`).
+ */
+export type DatepickerValue = Date | Date[] | number | number[] | null;
+
+/** What the picker accepts: a `Date`, an ISO `yyyy-MM-dd` string, or a Unix timestamp in seconds (number or digit string). */
+export type DateInput = Date | string | number;
 
 /** UI strings. Defaults are English; `today` is localised through `Intl.RelativeTimeFormat`. */
 export interface LocaleStrings {
@@ -64,13 +70,13 @@ export interface DatepickerOptions {
   mode?: DatepickerMode;
 
   /** Initial / new selection. Takes precedence over the input's existing value. */
-  selected?: Date | Date[] | null;
+  selected?: DateInput | DateInput[] | null;
   /** Month shown (and day focused) when nothing is selected. Defaults to today. */
-  defaultDate?: Date | null;
+  defaultDate?: DateInput | null;
 
-  /** `Date` or ISO `yyyy-MM-dd` string. */
-  minDate?: Date | string | null;
-  maxDate?: Date | string | null;
+  /** `Date`, ISO `yyyy-MM-dd` string or Unix timestamp in seconds. */
+  minDate?: DateInput | null;
+  maxDate?: DateInput | null;
   disabledDates?: Date[] | ((date: Date) => boolean);
   /** `0` = Sunday. */
   disabledDaysOfWeek?: number[];
@@ -100,7 +106,13 @@ export interface DatepickerOptions {
 
   /** Replace default CSS class names. */
   classes?: Partial<ClassNames>;
-  /** Input that receives the ISO value (`yyyy-MM-dd`, ranges as `a/b`, multiple as `a,b`). */
+  /**
+   * Report Unix timestamps (seconds, local midnight of each selected day) from `getDate()`, `onChange`,
+   * the `change` event, `isoInput` and the web component's form value, instead of `Date`s / ISO strings.
+   * Typed or pasted timestamps are always understood, whatever this is set to. Default `false`.
+   */
+  outputTimestamp?: boolean;
+  /** Input that receives the ISO value (`yyyy-MM-dd`, ranges as `a/b`, multiple as `a,b`), or timestamps with `outputTimestamp`. */
   isoInput?: HTMLInputElement | null;
   /** Element the popup is positioned against and treated as "inside" for outside clicks. Read at construction. */
   anchor?: HTMLElement;

@@ -1,10 +1,10 @@
 import { Calendar, CLASSES, type CalendarHandlers, type ViewState } from './Calendar';
-import { addMonths, dayKey, formatISO, monthStart, parseISOList, startOfDay, toDate } from './Day';
+import { addMonths, dayKey, formatISO, monthStart, parseValueList, startOfDay, toDate, toUnix } from './Day';
 import { formatDate, parseDates } from './format';
 import { resolveLocale, type Locale } from './localization';
 import { getMode, type Mode } from './modes';
 import { place } from './positioning';
-import type { DatepickerEventMap, DatepickerOptions, DatepickerValue, LocaleStrings } from './types';
+import type { DateInput, DatepickerEventMap, DatepickerOptions, DatepickerValue, LocaleStrings } from './types';
 
 const DEFAULTS: DatepickerOptions = {
   mode: 'single',
@@ -124,14 +124,20 @@ export class Datepicker extends EventTarget {
     this.isOpen ? this.close() : this.open();
   }
 
-  /** Selected date(s): `Date | null` in single mode, `Date[] | null` otherwise. Returns copies. */
+  /**
+   * Selected date(s): `Date | null` in single mode, `Date[] | null` otherwise (copies). With `outputTimestamp`
+   * the dates are Unix timestamps in seconds instead: `number | null` / `number[] | null`.
+   */
   getDate(): DatepickerValue {
-    const dates = this.sel.map((d) => new Date(d));
-    return this.mode.max === 1 ? (dates[0] ?? null) : dates.length ? dates : null;
+    const dates = this.sel.map((d) => (this.o.outputTimestamp ? toUnix(d) : new Date(d)));
+    return (this.mode.max === 1 ? (dates[0] ?? null) : dates.length ? dates : null) as DatepickerValue;
   }
 
-  /** Replaces the selection. Invalid dates are ignored; `change` fires only if `triggerChange` is true. */
-  setDate(date: DatepickerValue | string | string[], triggerChange = false): void {
+  /**
+   * Replaces the selection. Accepts `Date`s, ISO strings and Unix timestamps in seconds. Invalid dates are
+   * ignored; `change` fires only if `triggerChange` is true.
+   */
+  setDate(date: DateInput | DateInput[] | null, triggerChange = false): void {
     if (this.destroyed) return;
     const next = this.normalize(date);
     if (next[0]) this.reveal(next[0]);
@@ -450,7 +456,7 @@ export class Datepicker extends EventTarget {
   }
 
   private writeISO(): void {
-    if (this.o.isoInput) this.o.isoInput.value = this.sel.map(formatISO).join(this.mode.iso);
+    if (this.o.isoInput) this.o.isoInput.value = this.sel.map((d) => (this.o.outputTimestamp ? toUnix(d) : formatISO(d))).join(this.mode.iso);
   }
 
   private writeInput(): void {
@@ -461,9 +467,9 @@ export class Datepicker extends EventTarget {
     this.writeISO();
   }
 
-  /** ISO text (always accepted) or text in `dateFormat`. */
+  /** ISO dates / Unix timestamps (always accepted, whatever `dateFormat` is) or text in `dateFormat`. */
   private read(text: string): Date[] | null {
-    const iso = parseISOList(text);
+    const iso = parseValueList(text);
     return iso?.length ? iso : parseDates(text, this.fmt, this.loc);
   }
 

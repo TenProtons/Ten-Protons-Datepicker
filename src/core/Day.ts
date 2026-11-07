@@ -39,14 +39,32 @@ export const parseISO = (s: string): Date | null => {
   return d.getMonth() === mo && d.getDate() === +m[3]! ? d : null;
 };
 
-/** Parses `2025-03-05`, `2025-03-01/2025-03-10` or `2025-03-01,2025-03-05`. `null` if any part is invalid. */
-export const parseISOList = (s: string): Date[] | null => {
-  const parts = s.split(/[/,;\s]+/).filter(Boolean).map(parseISO);
-  return parts.every((d): d is Date => d !== null) ? parts : null;
+/** Local day of a Unix timestamp in seconds. */
+const fromUnix = (seconds: number): Date | null => {
+  const d = new Date(seconds * 1000);
+  return isNaN(+d) ? null : startOfDay(d);
 };
 
-/** Normalises a `Date` or ISO string to a local midnight; anything else becomes `null`. */
+/** Unix timestamp (seconds) of the local midnight of `d`. */
+export const toUnix = (d: Date): number => d.getTime() / 1000;
+
+/** Digits only, 9-11 of them (years 1973-5138), so no date format can be mistaken for a timestamp. */
+export const parseUnix = (s: string): Date | null => (/^\d{9,11}$/.test(s.trim()) ? fromUnix(+s) : null);
+
+const VALUE = /\d{4}-\d{2}-\d{2}|\d{9,11}/g;
+
+/**
+ * Parses ISO dates and/or Unix timestamps separated by whitespace, `,` `;` `/` or dashes:
+ * `2025-03-05`, `1741996800`, `2025-03-01/2025-03-10`, `1741996800 - 1742428800`.
+ * `null` if anything else is in the text.
+ */
+export const parseValueList = (s: string): Date[] | null => {
+  const dates = (s.match(VALUE) ?? []).map((p) => parseISO(p) ?? parseUnix(p));
+  return dates.every((d): d is Date => d !== null) && !s.replace(VALUE, '').replace(/[\s,;/–—-]/g, '') ? (dates as Date[]) : null;
+};
+
+/** Normalises a `Date`, ISO string, Unix timestamp (number or digit string, in seconds) to a local midnight; anything else becomes `null`. */
 export const toDate = (v: unknown): Date | null => {
-  const d = v instanceof Date ? v : typeof v === 'string' ? parseISO(v) : null;
+  const d = v instanceof Date ? v : typeof v === 'string' ? (parseISO(v) ?? parseUnix(v)) : typeof v === 'number' ? fromUnix(v) : null;
   return d && !isNaN(+d) ? startOfDay(d) : null;
 };

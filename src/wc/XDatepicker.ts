@@ -1,5 +1,5 @@
 import { Datepicker } from '../core/Datepicker';
-import { parseISOList } from '../core/Day';
+import { parseValueList } from '../core/Day';
 import type { DatepickerEventMap, DatepickerOptions } from '../core/types';
 import core from '../styles/core.css';
 import themes from '../styles/themes.css';
@@ -30,6 +30,7 @@ const ATTRS: Record<string, [keyof DatepickerOptions, (v: string | null) => unkn
   'allow-input': ['allowInput', bool],
   'close-on-select': ['closeOnSelect', bool],
   'disabled-days': ['disabledDaysOfWeek', list],
+  'output-timestamp': ['outputTimestamp', bool],
   inline: ['inline', bool],
 };
 const EVENTS = ['change', 'open', 'close', 'monthChange', 'yearChange'] as const;
@@ -43,9 +44,9 @@ const Base: typeof HTMLElement = typeof HTMLElement === 'undefined' ? (class {} 
 /**
  * `<x-datepicker>`: an input + calendar toggle with the popup inside its shadow root.
  *
- * Attributes: `value` (ISO, ranges `a/b`, multiple `a,b`), `name`, `placeholder`, `label`, `disabled`,
+ * Attributes: `value` (ISO or Unix seconds, ranges `a/b`, multiple `a,b`), `name`, `placeholder`, `label`, `disabled`,
  * `mode`, `locale`, `min`, `max`, `date-format`, `first-day`, `position`, `theme`, `number-of-months`,
- * `show-other-months`, `allow-input`, `close-on-select`, `disabled-days`, `inline`.
+ * `show-other-months`, `allow-input`, `close-on-select`, `disabled-days`, `output-timestamp`, `inline`.
  * Events (bubbling, composed): `change`, `open`, `close`, `monthChange`, `yearChange` with `detail`.
  * Style with `::part(input)`, `::part(toggle)` and the `--tp-*` custom properties.
  * Takes part in forms (via `ElementInternals`) in browsers that support form-associated elements.
@@ -149,7 +150,7 @@ export class XDatepicker extends Base {
     const attrValue = this.getAttribute('value');
     const picker = (this.picker = new Datepicker(this.input, {
       ...this.opts(),
-      selected: attrValue ? parseISOList(attrValue) : null,
+      selected: attrValue ? parseValueList(attrValue) : null,
       isoInput: this.iso,
       anchor: this.wrap,
       appendTo: this.root,
@@ -177,11 +178,12 @@ export class XDatepicker extends Base {
     await this.load(opts.mode);
     if (!this.picker) return;
     this.picker.setOptions(opts);
+    this.syncForm(); // e.g. `output-timestamp` changes the submitted value
     this.toggleBtn.setAttribute('aria-label', this.picker.strings.label);
   }
 
   private setValue(v: string | null): void {
-    this.picker?.setDate(v ? (parseISOList(v) ?? []) : []);
+    this.picker?.setDate(v ? (parseValueList(v) ?? []) : []);
     this.syncForm();
   }
 

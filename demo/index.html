@@ -50,9 +50,12 @@
   <main>
     <section id="backend" class="wide">
       <h2>Emulated backend response</h2>
-      <p>Paste a date string here as if it came from an API, to test how the pickers below parse and display it. One date (<code>2025-03-15</code>, <code>15.03.2025</code>, <code>Mar 15, 2025</code>) updates every <strong>single</strong> picker; two dates (<code>2025-03-10, 2025-03-20</code>) update every <strong>range</strong> picker; any number of dates updates every <strong>multiple</strong> picker. <code>dd.mm.yyyy</code> and <code>dd/mm/yyyy</code> are read day-first.</p>
+      <p>Paste a date string here as if it came from an API, to test how the pickers below parse and display it. One date (<code>2025-03-15</code>, <code>15.03.2025</code>, <code>Mar 15, 2025</code>, or a Unix timestamp in seconds such as <code>1794072736</code>) updates every <strong>single</strong> picker; two dates (<code>2025-03-10, 2025-03-20</code>) update every <strong>range</strong> picker; any number of dates updates every <strong>multiple</strong> picker. <code>dd.mm.yyyy</code> and <code>dd/mm/yyyy</code> are read day-first.</p>
       <label for="backend-input">Backend value</label>
-      <input type="text" id="backend-input" placeholder="2025-03-15  ·  15.03.2025  ·  Mar 15, 2025  ·  2025-03-10, 2025-03-20" autocomplete="off" spellcheck="false">
+      <input type="text" id="backend-input" placeholder="2025-03-15  ·  15.03.2025  ·  Mar 15, 2025  ·  1794072736  ·  2025-03-10, 2025-03-20" autocomplete="off" spellcheck="false">
+      <div class="row">
+        <label><input type="checkbox" id="output-ts"> <code>outputTimestamp</code>: every picker reports Unix timestamps (see the readouts and the ISO field in Manual entry)</label>
+      </div>
       <output id="backend-status">Waiting for a value…</output>
     </section>
 
@@ -179,14 +182,15 @@
     const $ = (s, r = document) => r.querySelector(s);
     const pad = (n) => String(n).padStart(2, '0');
     const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-    const show = (v) => (v == null ? 'none' : Array.isArray(v) ? v.map(iso).join(', ') : iso(v));
+    const one = (d) => (typeof d === 'number' ? String(d) : iso(d)); // Date, or a Unix timestamp with outputTimestamp
+    const show = (v) => (v == null ? 'none' : Array.isArray(v) ? v.map(one).join(', ') : one(v));
     const today = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); };
 
     const entries = [];
     const logEl = $('#log');
     const log = (name, type, detail) => {
       const li = document.createElement('li');
-      const text = detail === undefined || detail === null ? '' : ' ' + (Array.isArray(detail) ? detail.map(iso).join(' – ') : detail instanceof Date ? iso(detail) : detail);
+      const text = detail === undefined || detail === null ? '' : ' ' + (Array.isArray(detail) ? detail.map(one).join(' – ') : detail instanceof Date ? iso(detail) : detail);
       li.textContent = `${new Date().toLocaleTimeString()}  ${name}: ${type}${text}`;
       logEl.prepend(li);
       while (logEl.children.length > 8) logEl.lastChild.remove();
@@ -304,12 +308,17 @@
     {
       const input = $('#backend-input'), status = $('#backend-status');
       const MONTHS = 'jan feb mar apr may jun jul aug sep oct nov dec'.split(' ');
-      // ISO, day-first dd.mm.yyyy / dd/mm/yyyy, or "Mar 15, 2025". Scanning the text means the comma
-      // between two dates (and the one inside "Mar 15, 2025") needs no special handling.
-      const DATE_RE = /(\d{4})-(\d{1,2})-(\d{1,2})|(\d{1,2})[./](\d{1,2})[./](\d{4})|([A-Za-z]{3,})\.?\s+(\d{1,2}),?\s+(\d{4})/g;
+      // ISO, day-first dd.mm.yyyy / dd/mm/yyyy, "Mar 15, 2025", or a 9-11 digit Unix timestamp (seconds).
+      // Scanning the text means the comma between two dates (and the one inside "Mar 15, 2025") needs no special handling.
+      const DATE_RE = /(\d{4})-(\d{1,2})-(\d{1,2})|(\d{1,2})[./](\d{1,2})[./](\d{4})|([A-Za-z]{3,})\.?\s+(\d{1,2}),?\s+(\d{4})|\b(\d{9,11})\b/g;
       const parseDates = (text) => {
         const dates = [];
         for (const m of text.matchAll(DATE_RE)) {
+          if (m[10]) {
+            const t = new Date(+m[10] * 1000); // the pickers keep the local day of the instant
+            dates.push(new Date(t.getFullYear(), t.getMonth(), t.getDate()));
+            continue;
+          }
           const [y, mo, d] = m[1] ? [m[1], m[2], m[3]] : m[4] ? [m[6], m[5], m[4]] : [m[9], MONTHS.indexOf(m[7].slice(0, 3).toLowerCase()) + 1, m[8]];
           const date = new Date(+y, mo - 1, +d);
           if (date.getFullYear() !== +y || date.getMonth() !== mo - 1 || date.getDate() !== +d) return null; // e.g. 31.02 or an unknown month
@@ -351,6 +360,11 @@
         status.textContent = `✓ Parsed ${dates.length} date${dates.length > 1 ? 's' : ''} (${show(dates)}) · updated ${updated} picker${updated === 1 ? '' : 's'}`;
       };
       input.addEventListener('input', apply);
+
+      $('#output-ts').addEventListener('change', (e) => {
+        entries.forEach(({ dp, update }) => { dp.setOptions({ outputTimestamp: e.target.checked }); update(); });
+        document.querySelectorAll('x-datepicker').forEach((el) => el.toggleAttribute('output-timestamp', e.target.checked));
+      });
     }
 
     // ---- theme

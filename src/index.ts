@@ -3,6 +3,7 @@ export { registerLocale } from './core/localization';
 export { registerMode, byDay, type Mode } from './core/modes';
 export type {
   ClassNames,
+  DateInput,
   DatepickerEventMap,
   DatepickerMode,
   DatepickerOptions,
