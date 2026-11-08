@@ -113,6 +113,15 @@ export interface DatepickerOptions {
    * one time applies to every selected date. Default `false`.
    */
   enableTime?: boolean;
+  /**
+   * The backend works in UTC: values going in and out are UTC, while the picker shows and edits the user's local time.
+   * Covers `selected`, `setDate()`, `minDate` / `maxDate`, typed or pasted ISO strings and timestamps, and
+   * `getDate()`, `onChange`, `isoInput` and the web component's `value`:
+   * - with `enableTime`, ISO strings are UTC (`2025-03-15T11:07:09Z`, and without a zone they are read as UTC);
+   * - without it, each picked day is reported as UTC midnight and a UTC-midnight value shows as that day in every time zone.
+   * Default `false` (local time).
+   */
+  valueInUtc?: boolean;
   /** Allow typing a date. Default `true`. When `false` the input is read-only. */
   allowInput?: boolean;
   /** Close once a selection is complete. Defaults to `true` for single/range, `false` for multiple and with `enableTime`. */

@@ -4,6 +4,7 @@ Zero-dependency, accessible, framework-agnostic datepicker. Vanilla TypeScript +
 
 - WAI-ARIA date picker dialog pattern, full keyboard support, live-region announcements
 - Single, range and multiple selection, and an optional time selector, as separate, tree-shakeable modules
+- `valueInUtc`: your backend speaks UTC, the picker shows local time, and the conversion happens inside the picker
 - `Intl`-based localisation, RTL, locale-derived input format, first day of week
 - Manual input that is parsed on blur / Enter and validated against min / max / disabled dates
 - CSS variables, light / dark (`prefers-color-scheme` or `data-theme`), replaceable class names
@@ -31,7 +32,7 @@ npm i ten-protons-datepicker
 | `value` | ISO: `2025-03-05`, range `2025-03-01/2025-03-10`, multiple `2025-03-01,2025-03-05`. Unix timestamps work too; with `output-timestamp` the property returns them. See [Unix timestamps](#unix-timestamps) |
 | `name`, `placeholder`, `label`, `disabled` | `label` is the input's accessible name. Form-associated where `ElementInternals` exists |
 | `mode`, `locale`, `min`, `max`, `date-format`, `first-day`, `position`, `theme` | see [Options](#options) |
-| `number-of-months`, `show-other-months`, `allow-input`, `close-on-select`, `disabled-days`, `output-timestamp`, `enable-time`, `inline` | booleans: present = true, `="false"` = false |
+| `number-of-months`, `show-other-months`, `allow-input`, `close-on-select`, `disabled-days`, `output-timestamp`, `enable-time`, `value-in-utc`, `inline` | booleans: present = true, `="false"` = false |
 
 ```js
 const el = document.querySelector('x-datepicker');
@@ -84,6 +85,7 @@ With `inline: true` the calendar renders inside the given element (any element, 
 | `closeOnOutsideClick` | `true` | outside pointer-down or focus |
 | `classes` | | replace any default class name (`ClassNames`) |
 | `enableTime` | `false` | add an `HH:mm:ss` time selector below the calendar, see [Date & time](#date--time). Needs `ten-protons-datepicker/time` |
+| `valueInUtc` | `false` | the backend works in UTC: values going in and out are UTC, the picker shows local time, see [UTC backends](#utc-backends-valueinutc) |
 | `outputTimestamp` | `false` | report Unix timestamps (seconds) instead of `Date`s / ISO strings, see [Unix timestamps](#unix-timestamps) |
 | `isoInput` | | input that receives the ISO value (or the timestamp with `outputTimestamp`), e.g. a hidden field |
 | `anchor`, `appendTo` | input, `document.body` | construction only |
@@ -130,7 +132,7 @@ const dp = new Datepicker(input, { dateFormat: 'dd.MM.yyyy', outputTimestamp: tr
 Things to know:
 
 - **Day granularity (without `enableTime`).** A date-only picker selects days, not instants; with [`enableTime`](#date--time) the time of day is kept too. A timestamp is converted to the **local** calendar day it falls on, and the timestamp that comes out is the **local midnight** of that day. So `timestamp -> timestamp` normalises the time of day (`1794072736` comes back as `1794009600`), and it is stable from then on: feeding the output back in gives the same value.
-- **Time zones.** "Local" is the browser's time zone, in line with the rest of the picker. A timestamp for UTC midnight (`1741996800` = 2025-03-15T00:00Z) is still March 14 in New York. If your backend stores UTC-midnight timestamps for plain dates, convert them before passing them in.
+- **Time zones.** "Local" is the browser's time zone, in line with the rest of the picker. A timestamp for UTC midnight (`1741996800` = 2025-03-15T00:00Z) is still March 14 in New York. If your backend stores UTC-midnight timestamps for plain dates, set [`valueInUtc`](#utc-backends-valueinutc): `1741996800` is then 15 March in every time zone.
 - **Seconds only.** Millisecond timestamps (13 digits) are not recognised.
 - **Types.** `DatepickerValue` is `Date | Date[] | number | number[] | null`; narrow it with `typeof` / `instanceof` or check `outputTimestamp` yourself. With the default nothing changes at runtime.
 
@@ -199,8 +201,55 @@ Ranges work the same way: `withTime(withRange(new Datepicker(input, { outputTime
 
 Things to know:
 
-- **Local time.** As everywhere in the picker, the time of day is in the browser's time zone, and the timestamps are the instants of those local times. A time that doesn't exist (the hour skipped by a daylight-saving change, e.g. `02:30` on 9 March 2025 in New York) is moved to the next valid time (`03:30`), and the input shows that.
+- **Local time.** As everywhere in the picker, the time of day is in the browser's time zone, and the timestamps are the instants of those local times. With [`valueInUtc`](#utc-backends-valueinutc) the values are converted to and from UTC for you. A time that doesn't exist (the hour skipped by a daylight-saving change, e.g. `02:30` on 9 March 2025 in New York) is moved to the next valid time (`03:30`), and the input shows that.
 - **Seconds.** Dates are kept to the second; milliseconds are dropped.
+
+## UTC backends (`valueInUtc`)
+
+Many backends only speak UTC, while users pick dates in their own time zone. Normally that means every app writes the same conversion code in both directions, and gets it subtly wrong around midnight. Set **`valueInUtc: true`** (`value-in-utc` on the web component) and the picker does it: **everything that goes in or comes out is UTC, everything the user sees and edits is local.**
+
+```ts
+const dp = new Datepicker(input, { valueInUtc: true });
+
+dp.setDate(new Date('2025-03-15T00:00:00Z'));   // the backend's value: shows 15.03.2025 in every time zone
+dp.getDate().toISOString();                     // '2025-03-15T00:00:00.000Z', send it as is
+```
+
+```html
+<x-datepicker name="due" value-in-utc value="2025-03-15T00:00:00.000Z"></x-datepicker>
+```
+
+Without it, a user in Kyiv (UTC+2) who picks 15 March gets a `Date` for **local** midnight, and `toISOString()` sends `2025-03-14T22:00:00.000Z`: the backend stores the 14th. That is the bug this option removes.
+
+What "in and out" covers: `selected`, `defaultDate`, `minDate` / `maxDate`, `disabledDates` (array), `setDate()`, `jumpToDate()`, the `value` attribute, and typed or pasted ISO strings and timestamps, in; `getDate()`, `onChange`, the `change` event, `isoInput` and the web component's `value` / form value, out. The text in the input is always the user's local display and is never converted.
+
+What it does depends on whether a time is picked:
+
+| | without `valueInUtc` (local) | with `valueInUtc` |
+| --- | --- | --- |
+| **date only**: a picked day is reported as | `Date` at **local** midnight (`2025-03-14T22:00:00.000Z` for 15 March in Kyiv) | `Date` at **UTC midnight** (`2025-03-15T00:00:00.000Z`), in every time zone |
+| **date only**: a value is shown as | the local day of the instant (UTC midnight is 14 March in New York) | its **UTC day** (15 March everywhere) |
+| **with `enableTime`**: Date / timestamp | the instant of the local time | the same instant. Instants need no conversion |
+| **with `enableTime`**: ISO string | `2025-03-15T13:07:09`: local, no zone | `2025-03-15T11:07:09Z`: UTC (for a user in Kyiv) |
+| **with `enableTime`**: ISO string without a zone, in | local time | read as **UTC** (an explicit `Z` or `+02:00` always wins) |
+
+Combined with [`outputTimestamp`](#unix-timestamps), for a user in Kyiv (UTC+2) picking 15 March, or 15 March 13:07:09 with `enableTime`:
+
+| | `outputTimestamp: false` | `outputTimestamp: true` |
+| --- | --- | --- |
+| date only, local (default) | `Date`, `toISOString()` = `2025-03-14T22:00:00.000Z` | `1741989600` |
+| date only, **`valueInUtc`** | `Date`, `toISOString()` = `2025-03-15T00:00:00.000Z` | `1741996800` |
+| with time, local (default) | `Date`, `toISOString()` = `2025-03-15T11:07:09.000Z`; `isoInput` = `2025-03-15T13:07:09` | `1742036829` |
+| with time, **`valueInUtc`** | `Date`, same instant; `isoInput` = `2025-03-15T11:07:09Z` | `1742036829` |
+
+A UTC timestamp for a time of day works in either mode, because a timestamp is an instant. What changes is plain dates (UTC midnight instead of local midnight) and ISO strings (UTC with a `Z` instead of local without a zone).
+
+Things to know:
+
+- **Pass UTC values in.** With `valueInUtc`, `new Date('2025-03-15')` (UTC midnight) is 15 March, but `new Date(2025, 2, 15)` (local midnight) is 14 March for users east of UTC, which is what "a UTC value" means. This also applies to `minDate`, `maxDate` and `defaultDate`: pass the backend's values, not `new Date()` for "now".
+- **`disabledDates` as a function** and `disabledDaysOfWeek` work on the day the user sees, so a Sunday is a Sunday on screen whatever the time zone.
+- **Date-time ISO accepted forms:** `2025-03-15T11:07:09Z`, with milliseconds (`…09.000Z`, what `toISOString()` produces), with an offset (`…09+02:00`), without a zone (UTC with this option, local without it), or with a space instead of the `T`. A bare `2025-03-15` is a calendar day and needs no conversion, except that a time picker reads it as UTC midnight.
+- **Switching at runtime.** `setOptions({ valueInUtc })` keeps the day or time the user sees and changes what is reported.
 
 ## Keyboard
 

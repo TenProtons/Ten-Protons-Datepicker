@@ -217,6 +217,15 @@
             (see the readouts and the ISO field in Manual entry)</label
           >
         </div>
+        <div class="row">
+          <label
+            ><input type="checkbox" id="value-in-utc" />
+            <code>valueInUtc</code>: the backend is UTC. Values going in and out
+            are UTC, the pickers still show your local time. Readouts then show
+            the exact <code>toISOString()</code> your API would receive. Your
+            time zone: <code id="tz"></code></label
+          >
+        </div>
         <output id="backend-status">Waiting for a value…</output>
       </section>
 
@@ -483,14 +492,16 @@
       const pad = (n) => String(n).padStart(2, "0");
       const hms = (d) =>
         `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-      // A Date reads as 2026-11-07 (2026-11-07 13:07:09 with a time selector).
+      let utcOn = false; // valueInUtc: the "backend" speaks UTC
+      // A Date reads as 2026-11-07 (2026-11-07 13:07:09 with a time selector), or with valueInUtc as the toISOString() a backend gets.
       const iso = (d, time = false) =>
         `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}${time ? ` ${hms(d)}` : ""}`;
       // A Unix timestamp (outputTimestamp) reads as 1794074400 (2026-11-07).
+      const dateText = (d, time) => (utcOn ? d.toISOString() : iso(d, time));
       const stamp = (seconds, time) =>
-        `${seconds} (${iso(new Date(seconds * 1000), time)})`;
+        `${seconds} (${dateText(new Date(seconds * 1000), time)})`;
       const one = (d, time) =>
-        typeof d === "number" ? stamp(d, time) : iso(d, time);
+        typeof d === "number" ? stamp(d, time) : dateText(d, time);
       const show = (v, time) =>
         v == null
           ? "none"
@@ -760,11 +771,20 @@
         // Scanning the text means the comma between two dates (and the one inside "Mar 15, 2025") needs no special handling.
         const DATE_RE =
           /(\d{4})-(\d{1,2})-(\d{1,2})|(\d{1,2})[./](\d{1,2})[./](\d{4})|([A-Za-z]{3,})\.?\s+(\d{1,2}),?\s+(\d{4})|\b(\d{9,11})\b/g;
+        // A backend value: UTC when valueInUtc is on, otherwise the browser's local time.
+        const make = (y, mo, d, h = 0, mi = 0, s = 0) =>
+          utcOn
+            ? new Date(Date.UTC(y, mo, d, h, mi, s))
+            : new Date(y, mo, d, h, mi, s);
+        const ymd = (dt) =>
+          utcOn
+            ? [dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate()]
+            : [dt.getFullYear(), dt.getMonth(), dt.getDate()];
         const parseDates = (text) => {
           const dates = [];
           for (const m of text.matchAll(DATE_RE)) {
             if (m[10]) {
-              dates.push(new Date(+m[10] * 1000)); // date-only pickers keep just the local day of the instant
+              dates.push(new Date(+m[10] * 1000)); // an instant: the same in every mode
               continue;
             }
             const [y, mo, d] = m[1]
@@ -776,18 +796,14 @@
                     MONTHS.indexOf(m[7].slice(0, 3).toLowerCase()) + 1,
                     m[8],
                   ];
-            const date = new Date(+y, mo - 1, +d);
-            if (
-              date.getFullYear() !== +y ||
-              date.getMonth() !== mo - 1 ||
-              date.getDate() !== +d
-            )
-              return null; // e.g. 31.02 or an unknown month
+            let date = make(+y, mo - 1, +d);
+            const [yy, mm, dd] = ymd(date);
+            if (yy !== +y || mm !== mo - 1 || dd !== +d) return null; // e.g. 31.02 or an unknown month
             // An optional time right after the date: "15.03.2025 13:07:09", "2025-03-15T13:07".
             const t = /^[T\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(
               text.slice(m.index + m[0].length),
             );
-            if (t) date.setHours(+t[1], +t[2], +(t[3] ?? 0));
+            if (t) date = make(+y, mo - 1, +d, +t[1], +t[2], +(t[3] ?? 0));
             dates.push(date);
           }
           return dates.length ? dates : null;
@@ -825,7 +841,13 @@
             const time = el.hasAttribute("enable-time");
             el.value = []
               .concat(value)
-              .map((d) => (time ? `${iso(d)}T${hms(d)}` : iso(d)))
+              .map((d) =>
+                utcOn
+                  ? d.toISOString()
+                  : time
+                    ? `${iso(d)}T${hms(d)}`
+                    : iso(d),
+              )
               .join(wcSeparator[mode]);
             updated++;
           }
@@ -846,6 +868,26 @@
             );
           setTimeout(wcUpdate, 50); // the element applies attribute changes asynchronously
         });
+
+        // Switching the backend between local and UTC: re-feed the same text so you can compare.
+        $("#value-in-utc").addEventListener("change", (e) => {
+          utcOn = e.target.checked;
+          entries.forEach(({ dp, update }) => {
+            dp.setOptions({ valueInUtc: utcOn });
+            update();
+          });
+          document
+            .querySelectorAll("x-datepicker")
+            .forEach((el) => el.toggleAttribute("value-in-utc", utcOn));
+          setTimeout(() => {
+            apply();
+            wcUpdate();
+          }, 60); // after the elements have applied the attribute
+        });
+
+        const offset = -new Date().getTimezoneOffset();
+        $("#tz").textContent =
+          `${Intl.DateTimeFormat().resolvedOptions().timeZone} (UTC${offset < 0 ? "-" : "+"}${pad(Math.floor(Math.abs(offset) / 60))}:${pad(Math.abs(offset) % 60)})`;
       }
 
       // ---- theme

@@ -1,5 +1,5 @@
 import { Calendar, CLASSES, type CalendarHandlers, type ViewState } from './Calendar';
-import { addMonths, dayKey, formatISO, monthStart, normDate, parseValueList, startOfDay, toDate, toUnix } from './Day';
+import { addMonths, dayKey, formatISO, monthStart, normDate, parseValueList, startOfDay, toDate, toInstant, toUnix } from './Day';
 import { formatDate, formatTime, parseDates } from './format';
 import { resolveLocale, type Locale } from './localization';
 import { getMode, type Mode } from './modes';
@@ -95,8 +95,9 @@ export class Datepicker extends EventTarget {
     this.anchor = options.anchor ?? el;
     this.resolve(options);
 
-    const initial = options.selected !== undefined ? options.selected : this.input?.value.trim() ? this.read(this.input.value) : null;
-    this.sel = this.normalize(initial);
+    // A prefilled input is read straight into picker dates; `selected` is a value and goes through the UTC conversion.
+    const typed = options.selected === undefined && this.input?.value.trim() ? this.read(this.input.value) : null;
+    this.sel = typed ? this.mode.clean(typed) : this.normalize(options.selected);
     if (this.sel[0]) this.tod = timeOf(this.sel[0]);
     this.focus = this.clamp(this.sel[0] ?? this.home());
     this.view = monthStart(this.focus);
@@ -131,10 +132,12 @@ export class Datepicker extends EventTarget {
 
   /**
    * Selected date(s): `Date | null` in single mode, `Date[] | null` otherwise (copies). With `outputTimestamp`
-   * the dates are Unix timestamps in seconds instead: `number | null` / `number[] | null`.
+   * the dates are Unix timestamps in seconds instead: `number | null` / `number[] | null`. With `valueInUtc`
+   * a date-only picker reports each day as UTC midnight.
    */
   getDate(): DatepickerValue {
-    const dates = this.sel.map((d) => (this.o.outputTimestamp ? toUnix(d) : new Date(d)));
+    const { outputTimestamp, enableTime, valueInUtc } = this.o;
+    const dates = this.sel.map((d) => (outputTimestamp ? toUnix(d, enableTime, valueInUtc) : toInstant(d, enableTime, valueInUtc)));
     return (this.mode.max === 1 ? (dates[0] ?? null) : dates.length ? dates : null) as DatepickerValue;
   }
 
@@ -151,7 +154,7 @@ export class Datepicker extends EventTarget {
 
   /** Shows the month of `date` and moves the keyboard focus to it (clamped to min/max). */
   jumpToDate(date: Date): void {
-    const d = toDate(date);
+    const d = toDate(date, !!this.o.enableTime, !!this.o.valueInUtc);
     if (this.destroyed || !d) return;
     this.reveal(d);
     this.refresh();
@@ -167,7 +170,8 @@ export class Datepicker extends EventTarget {
     if (this.destroyed) return;
     const before = this.text();
     this.resolve({ ...this.user, ...options });
-    this.sel = this.normalize('selected' in options ? options.selected : this.sel); // also drops / adds the time of day when `enableTime` changed
+    // The current selection is already in picker form; only a new `selected` value is converted. Also drops / adds the time of day when `enableTime` changed.
+    this.sel = 'selected' in options ? this.normalize(options.selected) : this.mode.clean(this.sel.map((d) => normDate(d, !!this.o.enableTime)));
     if (this.sel[0]) this.tod = timeOf(this.sel[0]);
     this.pending = null;
     this.focus = this.clamp(this.sel[0] ?? this.focus);
@@ -220,10 +224,11 @@ export class Datepicker extends EventTarget {
     this.mode = mode;
     this.loc = resolveLocale(o.locale, o.firstDayOfWeek);
     this.fmt = o.dateFormat ?? this.loc.format;
-    this.lo = toDate(o.minDate);
-    this.hi = toDate(o.maxDate);
+    const [time, utc] = [!!o.enableTime, !!o.valueInUtc];
+    this.lo = toDate(o.minDate, time, utc);
+    this.hi = toDate(o.maxDate, time, utc);
     const dd = o.disabledDates;
-    this.skip = Array.isArray(dd) ? new Set(dd.map(dayKey)) : null;
+    this.skip = Array.isArray(dd) ? new Set(dd.map((d) => dayKey(toDate(d, time, utc) ?? d))) : null;
   }
 
   private monthsShown(): number {
@@ -231,7 +236,7 @@ export class Datepicker extends EventTarget {
   }
 
   private home(): Date {
-    return toDate(this.o.defaultDate) ?? startOfDay(new Date());
+    return toDate(this.o.defaultDate, !!this.o.enableTime, !!this.o.valueInUtc) ?? startOfDay(new Date());
   }
 
   private isDisabled = (d: Date): boolean => {
@@ -257,8 +262,8 @@ export class Datepicker extends EventTarget {
 
   private normalize(v: unknown): Date[] {
     const list = v == null ? [] : Array.isArray(v) ? v : [v];
-    const time = !!this.o.enableTime;
-    return this.mode.clean(list.map((x) => toDate(x, time)).filter((d): d is Date => d !== null));
+    const [time, utc] = [!!this.o.enableTime, !!this.o.valueInUtc];
+    return this.mode.clean(list.map((x) => toDate(x, time, utc)).filter((d): d is Date => d !== null));
   }
 
   /** `d` with the picker's time of day; date-only pickers keep their midnights. */
@@ -491,8 +496,8 @@ export class Datepicker extends EventTarget {
   }
 
   private writeISO(): void {
-    const { isoInput, outputTimestamp, enableTime } = this.o;
-    if (isoInput) isoInput.value = this.sel.map((d) => (outputTimestamp ? toUnix(d) : formatISO(d, enableTime))).join(this.mode.iso);
+    const { isoInput, outputTimestamp, enableTime, valueInUtc } = this.o;
+    if (isoInput) isoInput.value = this.sel.map((d) => (outputTimestamp ? toUnix(d, enableTime, valueInUtc) : formatISO(d, enableTime, valueInUtc))).join(this.mode.iso);
   }
 
   private writeInput(): void {
@@ -509,8 +514,8 @@ export class Datepicker extends EventTarget {
    */
   private read(text: string): Date[] | null {
     const time = !!this.o.enableTime;
-    const iso = parseValueList(text);
-    return iso?.length ? iso.map((d) => normDate(d, time)) : parseDates(text, this.fmt, this.loc, time ? this.tod : undefined);
+    const iso = parseValueList(text, time, !!this.o.valueInUtc);
+    return iso?.length ? iso : parseDates(text, this.fmt, this.loc, time ? this.tod : undefined);
   }
 
   /**

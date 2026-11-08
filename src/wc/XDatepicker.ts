@@ -1,5 +1,4 @@
 import { Datepicker } from '../core/Datepicker';
-import { parseValueList } from '../core/Day';
 import type { DatepickerEventMap, DatepickerOptions } from '../core/types';
 import core from '../styles/core.css';
 import themes from '../styles/themes.css';
@@ -15,6 +14,8 @@ const str = (v: string | null) => v ?? undefined;
 const num = (v: string | null) => (v === null ? undefined : Number(v));
 const bool = (v: string | null) => (v === null ? undefined : v !== 'false');
 const list = (v: string | null) => (v === null ? undefined : v.split(',').map(Number));
+// `value` is a list of ISO dates / timestamps (`a`, `a/b`, `a,b`). The picker parses and converts each, so `value-in-utc` applies.
+const tokens = (v: string) => v.split(/\s*[/,;]\s*/).filter(Boolean);
 
 /** attribute -> [option, parser]. A missing attribute parses to `undefined`, i.e. the default. */
 const ATTRS: Record<string, [keyof DatepickerOptions, (v: string | null) => unknown]> = {
@@ -33,6 +34,7 @@ const ATTRS: Record<string, [keyof DatepickerOptions, (v: string | null) => unkn
   'disabled-days': ['disabledDaysOfWeek', list],
   'output-timestamp': ['outputTimestamp', bool],
   'enable-time': ['enableTime', bool],
+  'value-in-utc': ['valueInUtc', bool],
   inline: ['inline', bool],
 };
 const EVENTS = ['change', 'open', 'close', 'monthChange', 'yearChange'] as const;
@@ -48,7 +50,7 @@ const Base: typeof HTMLElement = typeof HTMLElement === 'undefined' ? (class {} 
  *
  * Attributes: `value` (ISO or Unix seconds, ranges `a/b`, multiple `a,b`), `name`, `placeholder`, `label`, `disabled`,
  * `mode`, `locale`, `min`, `max`, `date-format`, `first-day`, `position`, `theme`, `number-of-months`,
- * `show-other-months`, `allow-input`, `close-on-select`, `disabled-days`, `output-timestamp`, `enable-time`, `inline`.
+ * `show-other-months`, `allow-input`, `close-on-select`, `disabled-days`, `output-timestamp`, `enable-time`, `value-in-utc`, `inline`.
  * Events (bubbling, composed): `change`, `open`, `close`, `monthChange`, `yearChange` with `detail`.
  * Style with `::part(input)`, `::part(toggle)` and the `--tp-*` custom properties.
  * Takes part in forms (via `ElementInternals`) in browsers that support form-associated elements.
@@ -152,7 +154,7 @@ export class XDatepicker extends Base {
     const attrValue = this.getAttribute('value');
     const picker = (this.picker = new Datepicker(this.input, {
       ...this.opts(),
-      selected: attrValue ? parseValueList(attrValue) : null,
+      selected: attrValue ? tokens(attrValue) : null,
       isoInput: this.iso,
       anchor: this.wrap,
       appendTo: this.root,
@@ -185,7 +187,7 @@ export class XDatepicker extends Base {
   }
 
   private setValue(v: string | null): void {
-    this.picker?.setDate(v ? (parseValueList(v) ?? []) : []);
+    this.picker?.setDate(v ? tokens(v) : []);
     this.syncForm();
   }
 
