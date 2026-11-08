@@ -28,25 +28,103 @@ export const fromKey = (k: number): Date => makeDate(Math.floor(k / 10000), Math
 
 const pad = (n: number, len = 2): string => String(n).padStart(len, '0');
 
-/** `yyyy-MM-dd` in local time (never `toISOString`, which shifts the day across time zones). */
-export const formatISO = (d: Date): string => `${pad(d.getFullYear(), 4)}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+/** UTC counterpart of `makeDate` (also safe for years < 100). */
+const utcDate = (y: number, m: number, d: number, h = 0, mi = 0, s = 0): Date => {
+  const x = new Date(0);
+  x.setUTCFullYear(y, m, d);
+  x.setUTCHours(h, mi, s, 0);
+  return x;
+};
 
-export const parseISO = (s: string): Date | null => {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
+/**
+ * Inside the picker a date is a local calendar day, or with `time` a local wall-clock time. Values crossing the
+ * API (`selected`, `getDate()`, ISO strings, timestamps...) are instants, and with `utc` (`valueInUtc`) a plain day
+ * is its UTC day (UTC midnight). These two functions are the only place the two meet.
+ */
+const fromInstant = (d: Date, time: boolean, utc: boolean): Date =>
+  utc && !time ? makeDate(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) : normDate(d, time);
+
+/** The value reported for a picker date: the same instant, or with `utc` and no time, UTC midnight of its day. */
+export const toInstant = (d: Date, time = false, utc = false): Date =>
+  utc && !time ? utcDate(d.getFullYear(), d.getMonth(), d.getDate()) : new Date(d);
+
+/** Unix timestamp (seconds) of `toInstant`: the local midnight / selected time, or with `utc` and no time, UTC midnight. */
+export const toUnix = (d: Date, time = false, utc = false): number => Math.floor(toInstant(d, time, utc).getTime() / 1000);
+
+/**
+ * `yyyy-MM-dd` (never `toISOString`, which shifts the day across time zones). With `time`: `yyyy-MM-ddTHH:mm:ss`
+ * in local time, or with `utc` as the UTC instant: `yyyy-MM-ddTHH:mm:ssZ`.
+ */
+export const formatISO = (d: Date, time = false, utc = false): string => {
+  const u = time && utc;
+  const [y, mo, day, h, mi, s] = u
+    ? [d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds()]
+    : [d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()];
+  return `${pad(y!, 4)}-${pad(mo! + 1)}-${pad(day!)}${time ? `T${pad(h!)}:${pad(mi!)}:${pad(s!)}${u ? 'Z' : ''}` : ''}`;
+};
+
+// yyyy-MM-dd, optionally T/space + HH:mm[:ss[.fff]] and a zone (Z, +02:00, -0300)
+const ISO = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
+
+/**
+ * Parses an ISO date or date-time into a picker date. A date-time without a zone is local time, or UTC with `utc`;
+ * a zone (`Z`, `+02:00`) always wins. A bare `yyyy-MM-dd` names a calendar day, so no zone applies to it
+ * (unless a time picker reads it as UTC midnight).
+ */
+export const parseISO = (s: string, time = false, utc = false): Date | null => {
+  const m = ISO.exec(s.trim());
   if (!m) return null;
-  const mo = +m[2]! - 1;
-  const d = makeDate(+m[1]!, mo, +m[3]!);
-  return d.getMonth() === mo && d.getDate() === +m[3]! ? d : null;
+  const [y, mo, d] = [+m[1]!, +m[2]! - 1, +m[3]!];
+  const [h, mi, sec] = [+(m[4] ?? 0), +(m[5] ?? 0), +(m[6] ?? 0)];
+  const day = makeDate(y, mo, d);
+  if (day.getMonth() !== mo || day.getDate() !== d || h > 23 || mi > 59 || sec > 59) return null;
+  if (m[4] === undefined && !(time && utc)) return day;
+
+  const zone = m[7];
+  let at: Date;
+  if (zone && zone !== 'Z') {
+    const offset = (zone[0] === '-' ? -1 : 1) * (+zone.slice(1, 3) * 60 + +zone.slice(-2));
+    at = new Date(utcDate(y, mo, d, h, mi, sec).getTime() - offset * 60000);
+  } else if (zone || utc) at = utcDate(y, mo, d, h, mi, sec);
+  else (at = day).setHours(h, mi, sec);
+  return fromInstant(at, time, utc);
 };
 
-/** Parses `2025-03-05`, `2025-03-01/2025-03-10` or `2025-03-01,2025-03-05`. `null` if any part is invalid. */
-export const parseISOList = (s: string): Date[] | null => {
-  const parts = s.split(/[/,;\s]+/).filter(Boolean).map(parseISO);
-  return parts.every((d): d is Date => d !== null) ? parts : null;
+/** The picker date of a Unix timestamp in seconds. */
+const fromUnix = (seconds: number, time: boolean, utc: boolean): Date | null => {
+  const d = new Date(seconds * 1000);
+  return isNaN(+d) ? null : fromInstant(d, time, utc);
 };
 
-/** Normalises a `Date` or ISO string to a local midnight; anything else becomes `null`. */
-export const toDate = (v: unknown): Date | null => {
-  const d = v instanceof Date ? v : typeof v === 'string' ? parseISO(v) : null;
-  return d && !isNaN(+d) ? startOfDay(d) : null;
+/** Digits only, 9-11 of them (years 1973-5138), so no date format can be mistaken for a timestamp. */
+export const parseUnix = (s: string, time = false, utc = false): Date | null =>
+  /^\d{9,11}$/.test(s.trim()) ? fromUnix(+s, time, utc) : null;
+
+const VALUE = /\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?|\d{9,11}/g;
+
+/**
+ * Parses ISO dates (with an optional time and zone) and/or Unix timestamps separated by whitespace, `,` `;` `/` or dashes:
+ * `2025-03-05`, `2025-03-05T13:07:09Z`, `1741996800`, `2025-03-01/2025-03-10`, `1741996800 - 1742428800`.
+ * Returns picker dates (see `parseISO` for `time` / `utc`). `null` if anything else is in the text.
+ */
+export const parseValueList = (s: string, time = false, utc = false): Date[] | null => {
+  const dates = (s.match(VALUE) ?? []).map((p) => parseISO(p, time, utc) ?? parseUnix(p, time, utc));
+  return dates.every((d): d is Date => d !== null) && !s.replace(VALUE, '').replace(/[\s,;/–—-]/g, '') ? (dates as Date[]) : null;
+};
+
+/** A copy of `d` as the picker stores it: local midnight, or with `time` the time of day to the second. */
+export const normDate = (d: Date, time = false): Date => {
+  if (!time) return startOfDay(d);
+  const x = new Date(d);
+  x.setMilliseconds(0);
+  return x;
+};
+
+/**
+ * Turns a `Date`, ISO string or Unix timestamp (number or digit string, in seconds) into a picker date;
+ * anything else becomes `null`. `time` keeps the time of day; `utc` reads the value as UTC (see `fromInstant`).
+ */
+export const toDate = (v: unknown, time = false, utc = false): Date | null => {
+  const d = v instanceof Date ? fromInstant(v, time, utc) : typeof v === 'string' ? (parseISO(v, time, utc) ?? parseUnix(v, time, utc)) : typeof v === 'number' ? fromUnix(v, time, utc) : null;
+  return d && !isNaN(+d) ? d : null;
 };

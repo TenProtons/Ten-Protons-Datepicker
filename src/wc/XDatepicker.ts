@@ -1,19 +1,21 @@
 import { Datepicker } from '../core/Datepicker';
-import { parseISOList } from '../core/Day';
 import type { DatepickerEventMap, DatepickerOptions } from '../core/types';
 import core from '../styles/core.css';
 import themes from '../styles/themes.css';
 
-// Extra modes load on demand, so `<x-datepicker mode="range">` costs nothing for single-date pages.
+// Extra modes (and the time selector) load on demand, so `<x-datepicker mode="range">` costs nothing for single-date pages.
 const MODES: Record<string, () => Promise<unknown>> = {
   range: () => import('../modules/range'),
   multiple: () => import('../modules/multiple'),
 };
+const loadTime = () => import('../modules/time');
 
 const str = (v: string | null) => v ?? undefined;
 const num = (v: string | null) => (v === null ? undefined : Number(v));
 const bool = (v: string | null) => (v === null ? undefined : v !== 'false');
 const list = (v: string | null) => (v === null ? undefined : v.split(',').map(Number));
+// `value` is a list of ISO dates / timestamps (`a`, `a/b`, `a,b`). The picker parses and converts each, so `value-in-utc` applies.
+const tokens = (v: string) => v.split(/\s*[/,;]\s*/).filter(Boolean);
 
 /** attribute -> [option, parser]. A missing attribute parses to `undefined`, i.e. the default. */
 const ATTRS: Record<string, [keyof DatepickerOptions, (v: string | null) => unknown]> = {
@@ -30,6 +32,9 @@ const ATTRS: Record<string, [keyof DatepickerOptions, (v: string | null) => unkn
   'allow-input': ['allowInput', bool],
   'close-on-select': ['closeOnSelect', bool],
   'disabled-days': ['disabledDaysOfWeek', list],
+  'output-timestamp': ['outputTimestamp', bool],
+  'enable-time': ['enableTime', bool],
+  'value-in-utc': ['valueInUtc', bool],
   inline: ['inline', bool],
 };
 const EVENTS = ['change', 'open', 'close', 'monthChange', 'yearChange'] as const;
@@ -43,9 +48,9 @@ const Base: typeof HTMLElement = typeof HTMLElement === 'undefined' ? (class {} 
 /**
  * `<x-datepicker>`: an input + calendar toggle with the popup inside its shadow root.
  *
- * Attributes: `value` (ISO, ranges `a/b`, multiple `a,b`), `name`, `placeholder`, `label`, `disabled`,
+ * Attributes: `value` (ISO or Unix seconds, ranges `a/b`, multiple `a,b`), `name`, `placeholder`, `label`, `disabled`,
  * `mode`, `locale`, `min`, `max`, `date-format`, `first-day`, `position`, `theme`, `number-of-months`,
- * `show-other-months`, `allow-input`, `close-on-select`, `disabled-days`, `inline`.
+ * `show-other-months`, `allow-input`, `close-on-select`, `disabled-days`, `output-timestamp`, `enable-time`, `value-in-utc`, `inline`.
  * Events (bubbling, composed): `change`, `open`, `close`, `monthChange`, `yearChange` with `detail`.
  * Style with `::part(input)`, `::part(toggle)` and the `--tp-*` custom properties.
  * Takes part in forms (via `ElementInternals`) in browsers that support form-associated elements.
@@ -136,20 +141,20 @@ export class XDatepicker extends Base {
     return { ...o, ...this.extra };
   }
 
-  private async load(mode?: string): Promise<void> {
-    if (mode && MODES[mode]) await MODES[mode]!();
+  private async load({ mode, enableTime }: DatepickerOptions): Promise<void> {
+    await Promise.all([mode && MODES[mode]?.(), enableTime && loadTime()]);
   }
 
   private async init(): Promise<Datepicker | null> {
     if (this.picker) return this.picker;
     const gen = ++this.gen;
-    await this.load(this.opts().mode);
+    await this.load(this.opts());
     if (gen !== this.gen || !this.isConnected) return null; // disconnected while the mode loaded
 
     const attrValue = this.getAttribute('value');
     const picker = (this.picker = new Datepicker(this.input, {
       ...this.opts(),
-      selected: attrValue ? parseISOList(attrValue) : null,
+      selected: attrValue ? tokens(attrValue) : null,
       isoInput: this.iso,
       anchor: this.wrap,
       appendTo: this.root,
@@ -174,14 +179,15 @@ export class XDatepicker extends Base {
 
   private async apply(): Promise<void> {
     const opts = this.opts();
-    await this.load(opts.mode);
+    await this.load(opts);
     if (!this.picker) return;
     this.picker.setOptions(opts);
+    this.syncForm(); // e.g. `output-timestamp` changes the submitted value
     this.toggleBtn.setAttribute('aria-label', this.picker.strings.label);
   }
 
   private setValue(v: string | null): void {
-    this.picker?.setDate(v ? (parseISOList(v) ?? []) : []);
+    this.picker?.setDate(v ? tokens(v) : []);
     this.syncForm();
   }
 

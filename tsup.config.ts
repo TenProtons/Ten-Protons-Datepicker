@@ -6,6 +6,7 @@ export default defineConfig({
     index: 'src/index.ts',
     range: 'src/modules/range.ts',
     multiple: 'src/modules/multiple.ts',
+    time: 'src/modules/time.ts',
     wc: 'src/wc/index.ts',
     'locales/uk': 'src/locales/uk.ts',
   },

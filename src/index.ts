@@ -1,8 +1,10 @@
 export { Datepicker } from './core/Datepicker';
 export { registerLocale } from './core/localization';
 export { registerMode, byDay, type Mode } from './core/modes';
+export type { Time } from './core/time';
 export type {
   ClassNames,
+  DateInput,
   DatepickerEventMap,
   DatepickerMode,
   DatepickerOptions,

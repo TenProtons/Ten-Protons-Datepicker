@@ -8,6 +8,7 @@
   "sideEffects": [
     "./dist/range.js",
     "./dist/multiple.js",
+    "./dist/time.js",
     "./dist/wc.js",
     "./dist/locales/*.js",
     "*.css"
@@ -19,6 +20,7 @@
     ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
     "./range": { "types": "./dist/range.d.ts", "import": "./dist/range.js" },
     "./multiple": { "types": "./dist/multiple.d.ts", "import": "./dist/multiple.js" },
+    "./time": { "types": "./dist/time.d.ts", "import": "./dist/time.js" },
     "./wc": { "types": "./dist/wc.d.ts", "import": "./dist/wc.js" },
     "./locales/uk": { "types": "./dist/locales/uk.d.ts", "import": "./dist/locales/uk.js" },
     "./core.css": "./dist/core.css",
