@@ -23,7 +23,7 @@ Snapshot: package `ten-protons-datepicker` v0.1.0, HEAD `b5396cc` ("added valueI
 
 ## 1. Status in one screen
 
-Zero-dependency, framework-agnostic datepicker in strict TypeScript: an imperative `Datepicker` class plus a `<x-datepicker>` Web Component. ESM only.
+Zero-dependency, framework-agnostic datepicker in strict TypeScript: an imperative `Datepicker` class plus a `<ten-protons-datepicker>` Web Component (alias `<x-datepicker>`). ESM only.
 
 **Implemented:** single / range / multiple selection (range and multiple are separate modules); popup and inline calendar; one or two months; WAI-ARIA date-picker dialog pattern (roving tabindex grid, live region, focus trap, focus return); full keyboard navigation (RTL aware); manual input parsed on blur/Enter with validation; `Intl`-based localization (names, first weekday, RTL, derived default format); token `dateFormat`; min/max/disabled dates/weekdays; light/dark theming with CSS variables and replaceable class names; Unix timestamp input (always) and output (`outputTimestamp`); optional time selector (`enableTime`, separate module); UTC backend conversion (`valueInUtc`); `<x-datepicker>` with form association; a demo page; an English README.
 
@@ -74,7 +74,7 @@ src/
     multiple.ts       registers mode 'multiple'; exports withMultiple()
     time.ts           registers the HH:mm:ss selector UI; exports withTime()
   locales/uk.ts       Ukrainian UI strings; importing registers 'uk'
-  wc/XDatepicker.ts   the custom element; wc/index.ts defines <x-datepicker> (side effect)
+  wc/XDatepicker.ts   the custom element; wc/index.ts defines <ten-protons-datepicker> + alias <x-datepicker> (side effect)
   styles/core.css     all structural CSS + light vars; styles/themes.css  dark theme
 ```
 
@@ -112,7 +112,8 @@ Events (CustomEvent on the instance, plus `on*` callbacks): `change` (detail = `
 
 `getDate()` returns `Date | Date[] | number | number[] | null` (copies; `Date` in single mode, array in range/multiple; `null` when empty; numbers with `outputTimestamp`). During an unfinished range pick it returns the *committed* selection only.
 
-### Web component `<x-datepicker>`
+### Web component `<ten-protons-datepicker>` (alias `<x-datepicker>`)
+Both tags are the same element: a class can only be `define`d once, so `wc/index.ts` registers `XDatepicker` as `x-datepicker` and an empty subclass as `ten-protons-datepicker`. Each registration is skipped if the tag is already taken. The README uses the long name (`x-datepicker` is generic and may collide with another library); the demo still uses `x-datepicker`. Never remove the alias: it is published API.
 Attributes: `value`, `name`, `placeholder`, `label` (input `aria-label`), `disabled`, `mode`, `locale`, `min`, `max`, `date-format`, `first-day`, `position`, `theme`, `number-of-months`, `show-other-months`, `allow-input`, `close-on-select`, `disabled-days`, `output-timestamp`, `enable-time`, `value-in-utc`, `inline`. Boolean attrs: present = true, `="false"` = false. Properties: `value` (string, from the hidden iso input; setter sets the attribute), `options` (setter, for things attributes can't express), `ready` (Promise of the underlying `Datepicker`), `open/close/toggle()`. Events re-dispatched on the host (bubbles, composed). Parts: `wrap`, `input`, `toggle`.
 
 ## 5. The central idea: picker dates vs values

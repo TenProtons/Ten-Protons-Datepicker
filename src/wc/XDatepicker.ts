@@ -46,7 +46,7 @@ const LOCAL = `:host{display:inline-block}:host([hidden]){display:none}.wrap{pos
 const Base: typeof HTMLElement = typeof HTMLElement === 'undefined' ? (class {} as typeof HTMLElement) : HTMLElement;
 
 /**
- * `<x-datepicker>`: an input + calendar toggle with the popup inside its shadow root.
+ * `<ten-protons-datepicker>` (alias `<x-datepicker>`): an input + calendar toggle with the popup inside its shadow root.
  *
  * Attributes: `value` (ISO or Unix seconds, ranges `a/b`, multiple `a,b`), `name`, `placeholder`, `label`, `disabled`,
  * `mode`, `locale`, `min`, `max`, `date-format`, `first-day`, `position`, `theme`, `number-of-months`,
@@ -205,5 +205,6 @@ export class XDatepicker extends Base {
 declare global {
   interface HTMLElementTagNameMap {
     'x-datepicker': XDatepicker;
+    'ten-protons-datepicker': XDatepicker;
   }
 }
