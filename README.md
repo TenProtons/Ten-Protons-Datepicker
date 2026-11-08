@@ -288,7 +288,7 @@ Dark mode follows `prefers-color-scheme` unless `theme: 'light'` / `data-theme="
 
 Current Chrome, Firefox, Safari (14.1+) and Edge. Form association of the Web Component needs `ElementInternals` (Safari 16.4+); everywhere else it still works, but its value isn't submitted with a `<form>`. Use the `change` event or `isoInput` there.
 
-## Not in v1 yet
+## Not implemented yet
 
 Presets and a year / month picker view are not implemented. Month and year are reachable with the previous / next buttons and `PageUp` / `PageDown` (`Shift` for years).
 
