@@ -431,7 +431,7 @@ export class Datepicker extends EventTarget {
   }
 
   private reposition = (): void => {
-    if (this.cal && this.isOpen) place(this.anchor, this.cal.el, this.o.position ?? 'auto', this.loc.rtl);
+    if (this.cal && this.isOpen && !this.o.inline) place(this.anchor, this.cal.el, this.o.position ?? 'auto', this.loc.rtl);
   };
 
   private listenWhileOpen(): void {
