@@ -4,11 +4,17 @@ Zero-dependency, accessible, framework-agnostic datepicker. Vanilla TypeScript +
 
 - WAI-ARIA date picker dialog pattern, full keyboard support, live-region announcements
 - Single, range and multiple selection, and an optional time selector, as separate, tree-shakeable modules
+- Popup or inline calendar, one or two months, `<input>` binding or a ready-made `<ten-protons-datepicker>` Web Component
+- Form-associated Web Component: takes part in `<form>` submission and reset
+- `min` / `max` dates, disabled dates, disabled weekdays
+- Accepts `Date`, ISO strings (date or date-time, with or without a zone) and Unix timestamps; can report Unix timestamps back (`outputTimestamp`)
 - `valueInUtc`: your backend speaks UTC, the picker shows local time, and the conversion happens inside the picker
 - `Intl`-based localisation, RTL, locale-derived input format, first day of week
 - Manual input that is parsed on blur / Enter and validated against min / max / disabled dates
 - CSS variables, light / dark (`prefers-color-scheme` or `data-theme`), replaceable class names
 - ESM only, strict TypeScript types, no runtime dependencies
+
+**Works with any framework.** The datepicker is a standard Web Component on top of a plain TypeScript class, so it needs no framework adapter. Use it in Vue, React, Angular, Svelte, SolidJS, Lit, Alpine.js, Astro or plain HTML/JS: set attributes, listen to `change`. A Vue example is [below](#vue).
 
 ```sh
 npm i ten-protons-datepicker
@@ -67,7 +73,7 @@ Tell Vue that the tag is a custom element (Vite: `vue({ template: { compilerOpti
 </template>
 ```
 
-Attributes such as `theme` and `max` can be bound the same way. The element is created and destroyed with the component, so there is nothing to clean up. Other frameworks work the same: set attributes, listen to `change`.
+Attributes such as `theme` and `max` can be bound the same way. `min`, `max` and `value` are attributes, so they are strings: bind an ISO string or a Unix timestamp (`:max="maxDate?.toISOString()"`), not a `Date`, which would be stringified to a format the picker can't read and the limit would be silently ignored. The element is created and destroyed with the component, so there is nothing to clean up. Other frameworks work the same: set attributes, listen to `change`.
 
 ## Imperative API
 
@@ -97,7 +103,7 @@ With `inline: true` the calendar renders inside the given element (any element, 
 | --- | --- | --- |
 | `mode` | `'single'` | `'single' \| 'range' \| 'multiple'` |
 | `selected`, `defaultDate` | | initial value / month shown when empty |
-| `minDate`, `maxDate` | | `Date`, ISO `yyyy-MM-dd`, or a Unix timestamp in seconds (`DateInput`; also accepted by `selected`, `setDate`) |
+| `minDate`, `maxDate` | | `Date`, an ISO string (`2025-03-15`, or a date-time such as `2025-03-15T13:07:09`, `2025-03-15T13:07:09.724Z`, `2025-03-15T13:07:09+02:00`), or a Unix timestamp in seconds (`DateInput`; also accepted by `selected`, `setDate`). Limits compare calendar days, so the time of day is ignored; zones follow [`valueInUtc`](#utc-backends-valueinutc). An unparseable value is ignored, i.e. no limit |
 | `disabledDates`, `disabledDaysOfWeek` | | `Date[]` or `(date) => boolean`; `0` = Sunday |
 | `locale` | browser | BCP 47 tag or a `LocaleObject` |
 | `firstDayOfWeek` | from locale | `0`–`6` |
