@@ -16,6 +16,10 @@ Zero-dependency, accessible, framework-agnostic datepicker. Vanilla TypeScript +
 
 **Works with any framework.** The datepicker is a standard Web Component on top of a plain TypeScript class, so it needs no framework adapter. Use it in Vue, React, Angular, Svelte, SolidJS, Lit, Alpine.js, Astro or plain HTML/JS: set attributes, listen to `change`. A Vue example is [below](#vue).
 
+| Light | Dark | Range |
+| --- | --- | --- |
+| ![Calendar popup, light theme, with a selected day and today highlighted](https://raw.githubusercontent.com/TenProtons/Ten-Protons-Datepicker/main/docs/images/popup-light.png) | ![Calendar popup, dark theme](https://raw.githubusercontent.com/TenProtons/Ten-Protons-Datepicker/main/docs/images/popup-dark.png) | ![Range selection: the start day is selected and the days up to the hovered end day are previewed](https://raw.githubusercontent.com/TenProtons/Ten-Protons-Datepicker/main/docs/images/range.png) |
+
 ```sh
 npm i ten-protons-datepicker
 ```
@@ -187,6 +191,8 @@ const dp = withTime(new Datepicker(input, { dateFormat: 'dd.MM.yyyy', onChange: 
 ```html
 <ten-protons-datepicker enable-time output-timestamp name="meeting"></ten-protons-datepicker> <!-- loads the time module itself -->
 ```
+
+![Calendar with the hours, minutes and seconds selector below the days](https://raw.githubusercontent.com/TenProtons/Ten-Protons-Datepicker/main/docs/images/time.png)
 
 How it behaves:
 
