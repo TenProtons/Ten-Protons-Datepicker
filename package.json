@@ -2,7 +2,15 @@
   "name": "ten-protons-datepicker",
   "version": "0.1.0",
   "description": "Zero-dependency, accessible, tiny datepicker. Vanilla TypeScript + Web Component.",
-  "keywords": ["datepicker", "date-picker", "calendar", "web-component", "a11y", "range", "zero-dependency"],
+  "keywords": [
+    "datepicker",
+    "date-picker",
+    "calendar",
+    "web-component",
+    "a11y",
+    "range",
+    "zero-dependency"
+  ],
   "license": "MIT",
   "type": "module",
   "sideEffects": [
@@ -17,17 +25,39 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
-    "./range": { "types": "./dist/range.d.ts", "import": "./dist/range.js" },
-    "./multiple": { "types": "./dist/multiple.d.ts", "import": "./dist/multiple.js" },
-    "./time": { "types": "./dist/time.d.ts", "import": "./dist/time.js" },
-    "./wc": { "types": "./dist/wc.d.ts", "import": "./dist/wc.js" },
-    "./locales/uk": { "types": "./dist/locales/uk.d.ts", "import": "./dist/locales/uk.js" },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./range": {
+      "types": "./dist/range.d.ts",
+      "import": "./dist/range.js"
+    },
+    "./multiple": {
+      "types": "./dist/multiple.d.ts",
+      "import": "./dist/multiple.js"
+    },
+    "./time": {
+      "types": "./dist/time.d.ts",
+      "import": "./dist/time.js"
+    },
+    "./wc": {
+      "types": "./dist/wc.d.ts",
+      "import": "./dist/wc.js"
+    },
+    "./locales/uk": {
+      "types": "./dist/locales/uk.d.ts",
+      "import": "./dist/locales/uk.js"
+    },
     "./core.css": "./dist/core.css",
     "./themes.css": "./dist/themes.css",
     "./package.json": "./package.json"
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsup",
@@ -37,5 +67,13 @@
   "devDependencies": {
     "tsup": "^8.5.0",
     "typescript": "^5.9.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TenProtons/Ten-Protons-Datepicker.git"
+  },
+  "homepage": "https://github.com/TenProtons/Ten-Protons-Datepicker#readme",
+  "bugs": {
+    "url": "https://github.com/TenProtons/Ten-Protons-Datepicker/issues"
   }
 }
