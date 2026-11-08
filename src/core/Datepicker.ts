@@ -84,7 +84,11 @@ export class Datepicker extends EventTarget {
       this.hover = k;
       if (this.pending) this.refresh();
     },
-    today: () => this.pick(startOfDay(new Date())),
+    today: () => {
+      const d = startOfDay(new Date());
+      if (!this.isDisabled(d)) this.tod = [0, 0, 0]; // a rejected pick must not touch the time
+      this.pick(d);
+    },
     clear: () => this.setSel([], true),
     close: () => this.hide(true),
     time: (t) => this.setTime(t),
@@ -285,7 +289,7 @@ export class Datepicker extends EventTarget {
     const key = this.o.enableTime ? (d: Date) => +d : dayKey;
     const same = next.length === this.sel.length && next.every((d, i) => key(d) === key(this.sel[i]!));
     this.sel = next;
-    if (next[0]) this.tod = timeOf(next[0]);
+    this.tod = next[0] ? timeOf(next[0]) : [0, 0, 0];
     this.pending = null;
     this.writeInput();
     this.refresh();

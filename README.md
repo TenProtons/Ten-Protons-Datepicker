@@ -4,11 +4,21 @@ Zero-dependency, accessible, framework-agnostic datepicker. Vanilla TypeScript +
 
 - WAI-ARIA date picker dialog pattern, full keyboard support, live-region announcements
 - Single, range and multiple selection, and an optional time selector, as separate, tree-shakeable modules
+- Popup or inline calendar, one or two months, `<input>` binding or a ready-made `<ten-protons-datepicker>` Web Component
+- Form-associated Web Component: takes part in `<form>` submission and reset
+- `min` / `max` dates, disabled dates, disabled weekdays
+- Accepts `Date`, ISO strings (date or date-time, with or without a zone) and Unix timestamps; can report Unix timestamps back (`outputTimestamp`)
 - `valueInUtc`: your backend speaks UTC, the picker shows local time, and the conversion happens inside the picker
 - `Intl`-based localisation, RTL, locale-derived input format, first day of week
 - Manual input that is parsed on blur / Enter and validated against min / max / disabled dates
 - CSS variables, light / dark (`prefers-color-scheme` or `data-theme`), replaceable class names
 - ESM only, strict TypeScript types, no runtime dependencies
+
+**Works with any framework.** The datepicker is a standard Web Component on top of a plain TypeScript class, so it needs no framework adapter. Use it in Vue, React, Angular, Svelte, SolidJS, Lit, Alpine.js, Astro or plain HTML/JS: set attributes, listen to `change`. A Vue example is [below](#vue).
+
+| Light | Dark | Range |
+| --- | --- | --- |
+| ![Calendar popup, light theme, with a selected day and today highlighted](https://raw.githubusercontent.com/TenProtons/Ten-Protons-Datepicker/main/docs/images/popup-light.png) | ![Calendar popup, dark theme](https://raw.githubusercontent.com/TenProtons/Ten-Protons-Datepicker/main/docs/images/popup-dark.png) | ![Range selection: the start day is selected and the days up to the hovered end day are previewed](https://raw.githubusercontent.com/TenProtons/Ten-Protons-Datepicker/main/docs/images/range.png) |
 
 ```sh
 npm i ten-protons-datepicker
@@ -42,6 +52,11 @@ el.value;                       // ISO string of the current selection
 el.options = { disabledDates: (d) => d.getDay() === 0, onChange: console.log };
 el.addEventListener('change', (e) => console.log(e.detail)); // also: open, close, monthChange, yearChange
 await el.ready;                 // resolves with the underlying Datepicker
+
+// value, min and max are also properties: they take a Date, an ISO string or Unix seconds (null removes them)
+el.min = new Date();
+el.max = new Date(2026, 11, 31);
+el.value = new Date();          // range / multiple: an array, el.value = [start, end]
 ```
 
 The input is styled out of the box to match the calendar (border, radius and colours, light and dark, red border on invalid input). Restyle it with `::part(input)` and `::part(toggle)`, e.g. `ten-protons-datepicker::part(input) { border-radius: 0 }`. The calendar button is the web component's own icon (at the start of the field, like `showIcon` on a plain input), so `showIcon` doesn't apply to it.
@@ -67,7 +82,7 @@ Tell Vue that the tag is a custom element (Vite: `vue({ template: { compilerOpti
 </template>
 ```
 
-Attributes such as `theme` and `max` can be bound the same way. The element is created and destroyed with the component, so there is nothing to clean up. Other frameworks work the same: set attributes, listen to `change`.
+Attributes such as `theme` and `max` can be bound the same way. `min`, `max` and `value` accept a `Date` as well as an ISO string or a Unix timestamp: Vue sets a property when the element has one, so `:max="maxDate"` works with a `Date` directly. Written as plain HTML attributes (`max="…"`) they are strings, so use an ISO string or a timestamp there. The element is created and destroyed with the component, so there is nothing to clean up. Other frameworks work the same: set attributes, listen to `change`.
 
 ## Imperative API
 
@@ -96,8 +111,8 @@ With `inline: true` the calendar renders inside the given element (any element, 
 | Option | Default | |
 | --- | --- | --- |
 | `mode` | `'single'` | `'single' \| 'range' \| 'multiple'` |
-| `selected`, `defaultDate` | | initial value / month shown when empty |
-| `minDate`, `maxDate` | | `Date`, ISO `yyyy-MM-dd`, or a Unix timestamp in seconds (`DateInput`; also accepted by `selected`, `setDate`) |
+| `selected`, `defaultDate` | | initial value / month shown when empty. Same types as `minDate` (`selected` also takes an array) |
+| `minDate`, `maxDate` | | `Date`, an ISO string (`2025-03-15`, or a date-time such as `2025-03-15T13:07:09`, `2025-03-15T13:07:09.724Z`, `2025-03-15T13:07:09+02:00`), or a Unix timestamp in seconds (`DateInput`; also accepted by `selected`, `setDate`). Limits compare calendar days, so the time of day is ignored; zones follow [`valueInUtc`](#utc-backends-valueinutc). An unparseable value is ignored, i.e. no limit |
 | `disabledDates`, `disabledDaysOfWeek` | | `Date[]` or `(date) => boolean`; `0` = Sunday |
 | `locale` | browser | BCP 47 tag or a `LocaleObject` |
 | `firstDayOfWeek` | from locale | `0`–`6` |
@@ -176,6 +191,8 @@ const dp = withTime(new Datepicker(input, { dateFormat: 'dd.MM.yyyy', onChange: 
 ```html
 <ten-protons-datepicker enable-time output-timestamp name="meeting"></ten-protons-datepicker> <!-- loads the time module itself -->
 ```
+
+![Calendar with the hours, minutes and seconds selector below the days](https://raw.githubusercontent.com/TenProtons/Ten-Protons-Datepicker/main/docs/images/time.png)
 
 How it behaves:
 

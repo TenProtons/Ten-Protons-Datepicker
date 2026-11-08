@@ -1,5 +1,5 @@
 import { Datepicker } from '../core/Datepicker';
-import type { DatepickerEventMap, DatepickerOptions } from '../core/types';
+import type { DateInput, DatepickerEventMap, DatepickerOptions } from '../core/types';
 import core from '../styles/core.css';
 import themes from '../styles/themes.css';
 
@@ -16,6 +16,9 @@ const bool = (v: string | null) => (v === null ? undefined : v !== 'false');
 const list = (v: string | null) => (v === null ? undefined : v.split(',').map(Number));
 // `value` is a list of ISO dates / timestamps (`a`, `a/b`, `a,b`). The picker parses and converts each, so `value-in-utc` applies.
 const tokens = (v: string) => v.split(/\s*[/,;]\s*/).filter(Boolean);
+// Attribute text of a date property: a `Date` becomes its ISO string (the picker reads the same instant back); empty or invalid gives `null`.
+const dateAttr = (v: DateInput | DateInput[] | null | undefined): string | null =>
+  [v ?? []].flat().map((d) => (d instanceof Date ? (isNaN(+d) ? '' : d.toISOString()) : String(d))).filter(Boolean).join(',') || null;
 
 /** attribute -> [option, parser]. A missing attribute parses to `undefined`, i.e. the default. */
 const ATTRS: Record<string, [keyof DatepickerOptions, (v: string | null) => unknown]> = {
@@ -83,12 +86,28 @@ export class XDatepicker extends Base {
     this.toggleBtn.addEventListener('click', () => this.picker?.toggle());
   }
 
-  /** ISO value: `2025-03-05`, `2025-03-01/2025-03-10` (range) or `2025-03-01,2025-03-05` (multiple). */
+  /** ISO value: `2025-03-05`, `2025-03-01/2025-03-10` (range) or `2025-03-01,2025-03-05` (multiple). Set it from a `Date`, ISO string, Unix seconds, or an array of them. */
   get value(): string {
     return this.iso.value;
   }
-  set value(v: string) {
-    this.setAttribute('value', v);
+  set value(v: DateInput | DateInput[] | null) {
+    this.reflect('value', v);
+  }
+
+  /** Earliest selectable day (`min` attribute). Set it from a `Date`, ISO string or Unix seconds; `null` removes it. */
+  get min(): string | null {
+    return this.getAttribute('min');
+  }
+  set min(v: DateInput | null) {
+    this.reflect('min', v);
+  }
+
+  /** Latest selectable day (`max` attribute). Set it from a `Date`, ISO string or Unix seconds; `null` removes it. */
+  get max(): string | null {
+    return this.getAttribute('max');
+  }
+  set max(v: DateInput | null) {
+    this.reflect('max', v);
   }
 
   /** Options that can't be expressed as attributes (callbacks, `disabledDates`, a `LocaleObject`...). */
@@ -185,6 +204,11 @@ export class XDatepicker extends Base {
     this.picker.setOptions(opts);
     this.syncForm(); // e.g. `output-timestamp` changes the submitted value
     this.toggleBtn.setAttribute('aria-label', this.picker.strings.label);
+  }
+
+  private reflect(name: string, v: DateInput | DateInput[] | null | undefined): void {
+    const text = dateAttr(v);
+    text === null ? this.removeAttribute(name) : this.setAttribute(name, text);
   }
 
   private setValue(v: string | null): void {
