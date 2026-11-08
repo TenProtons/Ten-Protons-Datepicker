@@ -1,10 +1,10 @@
 /* Dark follows prefers-color-scheme unless data-theme="light"; data-theme="dark" forces it. */
-.tp-dp[data-theme=dark]{
+.tp-dp[data-theme=dark],:host([theme=dark]){
   --tp-bg:#161b22;--tp-fg:#e6edf3;--tp-muted:#8d96a0;--tp-border:#30363d;--tp-hover:#21262d;
   --tp-accent:#4c8dff;--tp-accent-fg:#0b1220;--tp-range:#1b2f52;--tp-focus:#79a8ff;--tp-shadow:0 8px 24px rgba(0,0,0,.5)
 }
 @media (prefers-color-scheme:dark){
-  .tp-dp:not([data-theme=light]){
+  .tp-dp:not([data-theme=light]),:host(:not([theme=light])){
     --tp-bg:#161b22;--tp-fg:#e6edf3;--tp-muted:#8d96a0;--tp-border:#30363d;--tp-hover:#21262d;
     --tp-accent:#4c8dff;--tp-accent-fg:#0b1220;--tp-range:#1b2f52;--tp-focus:#79a8ff;--tp-shadow:0 8px 24px rgba(0,0,0,.5)
   }

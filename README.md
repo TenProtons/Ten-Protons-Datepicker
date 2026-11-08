@@ -22,8 +22,10 @@ npm i ten-protons-datepicker
   import 'ten-protons-datepicker/locales/uk'; // optional UI strings for locale="uk"
 </script>
 
-<x-datepicker name="period" mode="range" locale="uk" min="2025-01-01" label="Period"></x-datepicker>
+<ten-protons-datepicker name="period" mode="range" locale="uk" min="2025-01-01" label="Period"></ten-protons-datepicker>
 ```
+
+`<x-datepicker>` is registered as an alias for the same element, so either tag works. Prefer `ten-protons-datepicker`: `x-datepicker` is a generic name another library could also claim, and the first one registered wins.
 
 `mode="range"` / `mode="multiple"` and `enable-time` load their module on demand, so single-date pages don't pay for them.
 
@@ -35,14 +37,37 @@ npm i ten-protons-datepicker
 | `number-of-months`, `show-other-months`, `allow-input`, `close-on-select`, `disabled-days`, `output-timestamp`, `enable-time`, `value-in-utc`, `inline` | booleans: present = true, `="false"` = false |
 
 ```js
-const el = document.querySelector('x-datepicker');
+const el = document.querySelector('ten-protons-datepicker');
 el.value;                       // ISO string of the current selection
 el.options = { disabledDates: (d) => d.getDay() === 0, onChange: console.log };
 el.addEventListener('change', (e) => console.log(e.detail)); // also: open, close, monthChange, yearChange
 await el.ready;                 // resolves with the underlying Datepicker
 ```
 
-Style with `::part(input)`, `::part(toggle)` and the `--tp-*` variables.
+The input is styled out of the box to match the calendar (border, radius and colours, light and dark, red border on invalid input). Restyle it with `::part(input)` and `::part(toggle)`, e.g. `ten-protons-datepicker::part(input) { border-radius: 0 }`. The calendar button is the web component's own icon, so `showIcon` doesn't apply to it.
+
+### Vue
+
+Tell Vue that the tag is a custom element (Vite: `vue({ template: { compilerOptions: { isCustomElement: (tag) => tag === 'ten-protons-datepicker' } } })`), then bind `value` and listen to `change`:
+
+```vue
+<script setup lang="ts">
+  import 'ten-protons-datepicker/wc'; // its CSS is built in; enable-time loads the time module itself
+
+  defineProps<{ modelValue: number | null }>();
+  const emit = defineEmits<{ 'update:modelValue': [timestamp: number | null] }>();
+  const onChange = (e: Event) => {
+    const value = (e as CustomEvent).detail;
+    emit('update:modelValue', typeof value === 'number' ? value : null);
+  };
+</script>
+
+<template>
+  <ten-protons-datepicker :value="modelValue ?? ''" label="Due" value-in-utc output-timestamp enable-time @change="onChange" />
+</template>
+```
+
+Attributes such as `theme` and `max` can be bound the same way. The element is created and destroyed with the component, so there is nothing to clean up. Other frameworks work the same: set attributes, listen to `change`.
 
 ## Imperative API
 
@@ -149,7 +174,7 @@ const dp = withTime(new Datepicker(input, { dateFormat: 'dd.MM.yyyy', onChange: 
 ```
 
 ```html
-<x-datepicker enable-time output-timestamp name="meeting"></x-datepicker> <!-- loads the time module itself -->
+<ten-protons-datepicker enable-time output-timestamp name="meeting"></ten-protons-datepicker> <!-- loads the time module itself -->
 ```
 
 How it behaves:
@@ -198,7 +223,7 @@ withTime(new Datepicker(input, { dateFormat: 'dd.MM.yyyy', outputTimestamp: true
 //    typed "1742044029"            shows 15.03.2025 13:07:09   getDate() = 1742044029                  exact round trip
 ```
 
-Ranges work the same way: `withTime(withRange(new Datepicker(input, { outputTimestamp: true })))` returns `[1741597200, 1741804200]` for 10 March 09:00:00 to 12 March 18:30:00 (UTC). In the web component, `<x-datepicker enable-time mode="range">` has the value `2025-03-10T09:00:00/2025-03-12T18:30:00`, or `1741597200/1741804200` with `output-timestamp`.
+Ranges work the same way: `withTime(withRange(new Datepicker(input, { outputTimestamp: true })))` returns `[1741597200, 1741804200]` for 10 March 09:00:00 to 12 March 18:30:00 (UTC). In the web component, `<ten-protons-datepicker enable-time mode="range">` has the value `2025-03-10T09:00:00/2025-03-12T18:30:00`, or `1741597200/1741804200` with `output-timestamp`.
 
 Things to know:
 
@@ -217,7 +242,7 @@ dp.getDate().toISOString();                     // '2025-03-15T00:00:00.000Z', s
 ```
 
 ```html
-<x-datepicker name="due" value-in-utc value="2025-03-15T00:00:00.000Z"></x-datepicker>
+<ten-protons-datepicker name="due" value-in-utc value="2025-03-15T00:00:00.000Z"></ten-protons-datepicker>
 ```
 
 Without it, a user in Kyiv (UTC+2) who picks 15 March gets a `Date` for **local** midnight, and `toISOString()` sends `2025-03-14T22:00:00.000Z`: the backend stores the 14th. That is the bug this option removes.

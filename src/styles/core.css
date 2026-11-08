@@ -1,8 +1,10 @@
-.tp-dp{
+.tp-dp,:host{
   --tp-bg:#fff;--tp-fg:#1f2328;--tp-muted:#656d76;--tp-border:#d0d7de;--tp-hover:#eef1f4;
   --tp-accent:#2563eb;--tp-accent-fg:#fff;--tp-range:#dbe7fd;--tp-focus:#2563eb;
   --tp-radius:.5rem;--tp-cell:2.25rem;--tp-pad:.75rem;--tp-z:1000;
-  --tp-shadow:0 8px 24px rgba(0,0,0,.15);
+  --tp-shadow:0 8px 24px rgba(0,0,0,.15)
+}
+.tp-dp{
   position:relative;box-sizing:border-box;width:max-content;max-width:calc(100vw - 1rem);padding:var(--tp-pad);
   background:var(--tp-bg);color:var(--tp-fg);border:1px solid var(--tp-border);border-radius:var(--tp-radius);
   font:.875rem/1.4 var(--tp-font,inherit)

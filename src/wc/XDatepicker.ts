@@ -41,12 +41,12 @@ const EVENTS = ['change', 'open', 'close', 'monthChange', 'yearChange'] as const
 
 const ICON =
   '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>';
-const LOCAL = `:host{display:inline-block}:host([hidden]){display:none}.wrap{position:relative;display:flex;align-items:center}input{box-sizing:border-box;width:100%;padding-inline-end:2.25rem;font:inherit}.toggle{position:absolute;inset-inline-end:.25rem;display:grid;place-items:center;width:1.75rem;height:1.75rem;padding:0;border:0;border-radius:.25rem;background:none;color:inherit;cursor:pointer}.toggle:disabled{opacity:.4;cursor:default}:host([inline]) .toggle{display:none}`;
+const LOCAL = `:host{display:inline-block}:host([hidden]){display:none}.wrap{position:relative;display:flex;align-items:center}input{box-sizing:border-box;width:100%;padding:.5rem .75rem;padding-inline-end:2.25rem;font:inherit;color:var(--tp-fg);background:var(--tp-bg);border:1px solid var(--tp-border);border-radius:var(--tp-radius)}input:disabled{opacity:.6}input[aria-invalid=true]{border-color:#d1242f}.toggle{position:absolute;inset-inline-end:.25rem;display:grid;place-items:center;width:1.75rem;height:1.75rem;padding:0;border:0;border-radius:.25rem;background:none;color:var(--tp-fg);cursor:pointer}.toggle:disabled{opacity:.4;cursor:default}:host([inline]) .toggle{display:none}`;
 
 const Base: typeof HTMLElement = typeof HTMLElement === 'undefined' ? (class {} as typeof HTMLElement) : HTMLElement;
 
 /**
- * `<x-datepicker>`: an input + calendar toggle with the popup inside its shadow root.
+ * `<ten-protons-datepicker>` (alias `<x-datepicker>`): an input + calendar toggle with the popup inside its shadow root.
  *
  * Attributes: `value` (ISO or Unix seconds, ranges `a/b`, multiple `a,b`), `name`, `placeholder`, `label`, `disabled`,
  * `mode`, `locale`, `min`, `max`, `date-format`, `first-day`, `position`, `theme`, `number-of-months`,
@@ -205,5 +205,6 @@ export class XDatepicker extends Base {
 declare global {
   interface HTMLElementTagNameMap {
     'x-datepicker': XDatepicker;
+    'ten-protons-datepicker': XDatepicker;
   }
 }

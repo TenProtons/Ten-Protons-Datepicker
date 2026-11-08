@@ -23,7 +23,7 @@ Snapshot: package `ten-protons-datepicker` v0.1.0, HEAD `b5396cc` ("added valueI
 
 ## 1. Status in one screen
 
-Zero-dependency, framework-agnostic datepicker in strict TypeScript: an imperative `Datepicker` class plus a `<x-datepicker>` Web Component. ESM only.
+Zero-dependency, framework-agnostic datepicker in strict TypeScript: an imperative `Datepicker` class plus a `<ten-protons-datepicker>` Web Component (alias `<x-datepicker>`). ESM only.
 
 **Implemented:** single / range / multiple selection (range and multiple are separate modules); popup and inline calendar; one or two months; WAI-ARIA date-picker dialog pattern (roving tabindex grid, live region, focus trap, focus return); full keyboard navigation (RTL aware); manual input parsed on blur/Enter with validation; `Intl`-based localization (names, first weekday, RTL, derived default format); token `dateFormat`; min/max/disabled dates/weekdays; light/dark theming with CSS variables and replaceable class names; Unix timestamp input (always) and output (`outputTimestamp`); optional time selector (`enableTime`, separate module); UTC backend conversion (`valueInUtc`); `<x-datepicker>` with form association; a demo page; an English README.
 
@@ -74,7 +74,7 @@ src/
     multiple.ts       registers mode 'multiple'; exports withMultiple()
     time.ts           registers the HH:mm:ss selector UI; exports withTime()
   locales/uk.ts       Ukrainian UI strings; importing registers 'uk'
-  wc/XDatepicker.ts   the custom element; wc/index.ts defines <x-datepicker> (side effect)
+  wc/XDatepicker.ts   the custom element; wc/index.ts defines <ten-protons-datepicker> + alias <x-datepicker> (side effect)
   styles/core.css     all structural CSS + light vars; styles/themes.css  dark theme
 ```
 
@@ -112,7 +112,8 @@ Events (CustomEvent on the instance, plus `on*` callbacks): `change` (detail = `
 
 `getDate()` returns `Date | Date[] | number | number[] | null` (copies; `Date` in single mode, array in range/multiple; `null` when empty; numbers with `outputTimestamp`). During an unfinished range pick it returns the *committed* selection only.
 
-### Web component `<x-datepicker>`
+### Web component `<ten-protons-datepicker>` (alias `<x-datepicker>`)
+Both tags are the same element: a class can only be `define`d once, so `wc/index.ts` registers `XDatepicker` as `x-datepicker` and an empty subclass as `ten-protons-datepicker`. Each registration is skipped if the tag is already taken. The README uses the long name (`x-datepicker` is generic and may collide with another library); the demo still uses `x-datepicker`. Never remove the alias: it is published API.
 Attributes: `value`, `name`, `placeholder`, `label` (input `aria-label`), `disabled`, `mode`, `locale`, `min`, `max`, `date-format`, `first-day`, `position`, `theme`, `number-of-months`, `show-other-months`, `allow-input`, `close-on-select`, `disabled-days`, `output-timestamp`, `enable-time`, `value-in-utc`, `inline`. Boolean attrs: present = true, `="false"` = false. Properties: `value` (string, from the hidden iso input; setter sets the attribute), `options` (setter, for things attributes can't express), `ready` (Promise of the underlying `Datepicker`), `open/close/toggle()`. Events re-dispatched on the host (bubbles, composed). Parts: `wrap`, `input`, `toggle`.
 
 ## 5. The central idea: picker dates vs values
@@ -224,7 +225,7 @@ Purpose (the user's words): backends that only speak UTC force every app to writ
 * Always Gregorian (`calendar: 'gregory'`) so `th`/`ar-SA` don't switch calendars.
 
 ### 7.7 Web component (`wc/XDatepicker.ts`)
-* Shadow root (open, `delegatesFocus`): `<style>core+themes+LOCAL</style><div.wrap part=wrap><input part=input><button.toggle part=toggle>`. CSS arrives as text via tsup's `.css` text loader (hence `css.d.ts`); `LOCAL` styles the host/input/toggle. The popup is appended **into the shadow root** (`appendTo: root`, `anchor: wrap`) and the shadow-local bare `input{…}` rule also matches the time fields — they beat it with `.tp-dp .tp-time-field` (specificity).
+* Shadow root (open, `delegatesFocus`): `<style>core+themes+LOCAL</style><div.wrap part=wrap><input part=input><button.toggle part=toggle>`. CSS arrives as text via tsup's `.css` text loader (hence `css.d.ts`); `LOCAL` styles the host/input/toggle. The input is boxed (border, radius, colours) from the `--tp-*` variables, which `core.css` / `themes.css` now also declare on `:host` (`:host([theme=dark])`, `:host(:not([theme=light]))` for the media query), because the input is a sibling of the popup, not inside `.tp-dp`. Page CSS (e.g. the demo's `input[type=text]` rule) never reaches the shadow input; that is why the demo's imperative inputs look boxed but the WC needed its own styles. Known gap: `theme` set only through `el.options` (not the attribute) styles the popup but not the input; and a page-level `--tp-*` on the host reaches only the input, as `.tp-dp` redeclares the variables. The popup is appended **into the shadow root** (`appendTo: root`, `anchor: wrap`) and the shadow-local bare `input{…}` rule also matches the time fields — they beat it with `.tp-dp .tp-time-field` (specificity).
 * `ATTRS` maps attribute → `[option, parser]`; `opts()` = attributes merged with `extra` (the `options` setter). A missing attribute parses to `undefined` ⇒ default, and `setOptions({...prev, ...undefined})` deliberately resets it.
 * **Async init:** `connectedCallback` → `ready = init()`: `await load(opts)` (dynamic `import()` of range/multiple/time as needed) then constructs the picker with `isoInput: this.iso` (a detached hidden `<input>` whose `.value` backs the `value` getter and the form value). A `gen` counter cancels init if the element was disconnected meanwhile. `disconnectedCallback` → `teardown()` (destroy). Re-attach re-inits.
 * `attributeChangedCallback`: `placeholder/label/disabled` handled directly; others are ignored until a picker exists; `value` → `setValue` (`setDate(tokens)` then `syncForm`); `inline` → teardown + init; everything else → `apply()` (async: load modules then `picker.setOptions(opts())`; the *attribute change is therefore applied asynchronously* — tests/demo wait ~50 ms).
