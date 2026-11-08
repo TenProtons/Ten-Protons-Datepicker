@@ -154,6 +154,7 @@ export class XDatepicker extends Base {
     const attrValue = this.getAttribute('value');
     const picker = (this.picker = new Datepicker(this.input, {
       ...this.opts(),
+      showIcon: false, // the toggle button is the icon
       selected: attrValue ? tokens(attrValue) : null,
       isoInput: this.iso,
       anchor: this.wrap,

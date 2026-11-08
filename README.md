@@ -81,6 +81,7 @@ With `inline: true` the calendar renders inside the given element (any element, 
 | `position` | `'auto'` | `auto top bottom left right`; auto flips above when there is no room below |
 | `theme` | auto | `'light' \| 'dark'` |
 | `allowInput` | `true` | `false` makes the input read-only |
+| `showIcon` | `true` | calendar icon inside the input, so it reads as a date field even without a label. `false` removes it. Needs `core.css`; the web component has its own toggle button and ignores this option |
 | `closeOnSelect` | `true` (single, range), `false` (multiple, and with `enableTime`) | |
 | `closeOnOutsideClick` | `true` | outside pointer-down or focus |
 | `classes` | | replace any default class name (`ClassNames`) |
@@ -281,6 +282,8 @@ The calendar is always Gregorian, and manual input accepts Arabic-Indic and Pers
 
 Import `core.css` (and `themes.css` for dark mode). Customise with CSS variables on `.tp-dp`:
 `--tp-bg --tp-fg --tp-muted --tp-border --tp-hover --tp-accent --tp-accent-fg --tp-range --tp-focus --tp-radius --tp-cell --tp-pad --tp-z --tp-shadow --tp-font`.
+
+The input's calendar icon (`showIcon`) is a CSS background on the `.tp-icon` class, with extra left padding (right in RTL). To change it, override `background-image` on `input.tp-icon`; to remove it, pass `showIcon: false`.
 
 Dark mode follows `prefers-color-scheme` unless `theme: 'light'` / `data-theme="light"`; `theme: 'dark'` forces it. To style with Tailwind or CSS Modules, pass `classes` and skip `core.css`.
 
