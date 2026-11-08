@@ -1,6 +1,6 @@
 {
   "name": "ten-protons-datepicker",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Zero-dependency, accessible, tiny datepicker. Vanilla TypeScript + Web Component.",
   "keywords": [
     "datepicker",
