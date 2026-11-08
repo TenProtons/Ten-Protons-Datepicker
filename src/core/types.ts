@@ -124,6 +124,8 @@ export interface DatepickerOptions {
   valueInUtc?: boolean;
   /** Allow typing a date. Default `true`. When `false` the input is read-only. */
   allowInput?: boolean;
+  /** Show a calendar icon inside the input so it reads as a date field even without a label. Default `true`. Needs `core.css`. */
+  showIcon?: boolean;
   /** Close once a selection is complete. Defaults to `true` for single/range, `false` for multiple and with `enableTime`. */
   closeOnSelect?: boolean;
   closeOnOutsideClick?: boolean;

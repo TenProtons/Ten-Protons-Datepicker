@@ -12,8 +12,10 @@ const DEFAULTS: DatepickerOptions = {
   position: 'auto',
   numberOfMonths: 1,
   allowInput: true,
+  showIcon: true,
   closeOnOutsideClick: true,
 };
+const ICON_CLASS = 'tp-icon';
 
 let uid = 0;
 const definedOnly = <T extends object>(o: T): T =>
@@ -175,7 +177,10 @@ export class Datepicker extends EventTarget {
     if (this.sel[0]) this.tod = timeOf(this.sel[0]);
     this.pending = null;
     this.focus = this.clamp(this.sel[0] ?? this.focus);
-    if (this.input) this.input.readOnly = this.wasReadOnly || this.o.allowInput === false;
+    if (this.input) {
+      this.input.readOnly = this.wasReadOnly || this.o.allowInput === false;
+      this.input.classList.toggle(ICON_CLASS, !!this.o.showIcon);
+    }
     if (before !== this.text()) this.writeInput();
     else if (this.o.isoInput) this.writeISO();
 
@@ -205,6 +210,7 @@ export class Datepicker extends EventTarget {
     if (this.input) {
       [...this.added, 'aria-controls', 'aria-invalid'].forEach((n) => this.input!.removeAttribute(n));
       this.input.readOnly = this.wasReadOnly;
+      this.input.classList.remove(ICON_CLASS);
     }
   }
 
@@ -431,7 +437,7 @@ export class Datepicker extends EventTarget {
   }
 
   private reposition = (): void => {
-    if (this.cal && this.isOpen) place(this.anchor, this.cal.el, this.o.position ?? 'auto', this.loc.rtl);
+    if (this.cal && this.isOpen && !this.o.inline) place(this.anchor, this.cal.el, this.o.position ?? 'auto', this.loc.rtl);
   };
 
   private listenWhileOpen(): void {
@@ -471,6 +477,7 @@ export class Datepicker extends EventTarget {
     setDefault('autocomplete', 'off');
     this.wasReadOnly = i.readOnly;
     i.readOnly = this.wasReadOnly || this.o.allowInput === false;
+    i.classList.toggle(ICON_CLASS, !!this.o.showIcon);
 
     this.on(i, 'click', () => this.present(this.o.allowInput === false));
     this.on(i, 'input', () => i.removeAttribute('aria-invalid'));

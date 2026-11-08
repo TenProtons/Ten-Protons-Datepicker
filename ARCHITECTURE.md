@@ -100,6 +100,7 @@ Events (CustomEvent on the instance, plus `on*` callbacks): `change` (detail = `
 | `inline` / `anchor` / `appendTo` | – | **read at construction only** |
 | `showOtherMonths` / `numberOfMonths` (1\|2) / `position` / `theme` | false / 1 / 'auto' / auto | |
 | `allowInput` | true | false ⇒ input is `readOnly` and click opens with focus in the grid |
+| `showIcon` | `true` | adds class `tp-icon` to the bound input (calendar icon as CSS background, §7.8); applied in `bindInput` and `setOptions`, removed in `destroy`. The WC passes `false` (it has its own toggle button) |
 | `closeOnSelect` | `mode.autoClose && !enableTime` | explicit value wins |
 | `closeOnOutsideClick` | true | covers pointerdown *and* focusin outside |
 | `classes` | – | partial `ClassNames` override (replaces defaults, §7.8) |
@@ -234,6 +235,7 @@ Purpose (the user's words): backends that only speak UTC force every app to writ
 * Variables on `.tp-dp`: `--tp-bg --tp-fg --tp-muted --tp-border --tp-hover --tp-accent --tp-accent-fg --tp-range --tp-focus --tp-radius --tp-cell --tp-pad --tp-z --tp-shadow` (+ `--tp-font`). Dark via `.tp-dp[data-theme=dark]` and `@media (prefers-color-scheme: dark){.tp-dp:not([data-theme=light])}` (the variable block is duplicated on purpose). `forced-colors` handled for the selected day.
 * `.tp-pop` = `position: fixed; z-index: var(--tp-z)`; `.tp-dp[hidden]{display:none}` is required because the class sets `display`.
 * **Host-page leakage:** the popup lives in `<body>`, so the host's global `input[type=text]{width:100%…}` hits the time fields. Library rules for them are prefixed `.tp-dp` and the fields have `size=2`; the time row is a 5-column grid, `width:100%; max-width: calc(7*var(--tp-cell))`, centred (so with two months it stays one month wide). Keep any new internal form control equally defensive.
+* **Input icon (`.tp-icon`):** an inline-SVG `background-image` on the bound `<input>` (no wrapper element, so the user's markup is untouched). It uses background *longhands* (the `background` shorthand would wipe the input's colour) and a doubled class `.tp-icon.tp-icon` so a page's `input[type=text]{background:…;padding:…}` cannot override it; `:dir(rtl)` mirrors the position. The class name is a constant in `Datepicker.ts`, not part of `ClassNames`. The stroke colour is fixed (`#7d8590`, readable on light and dark), as data URIs can't use CSS variables.
 * `classes` option replaces entries of `CLASSES` (in `Calendar.ts`); if a user replaces `root` they lose the variables and must supply their own CSS. No `content-visibility` is used (considered, deliberately skipped).
 
 ## 8. Traps and gotchas learned the hard way

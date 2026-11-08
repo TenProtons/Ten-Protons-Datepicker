@@ -47,6 +47,10 @@
 .tp-dp .tp-time-field:focus-visible{outline:2px solid var(--tp-focus);outline-offset:1px}
 .tp-time>span{text-align:center;color:var(--tp-muted)}
 
+/* Calendar icon in the bound input (`showIcon`). Longhands only, so the input keeps its own background colour; the doubled class beats a page's `input[type=text]{background;padding}`. */
+.tp-icon.tp-icon{padding-inline-start:2.25rem;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237d8590' stroke-width='2' stroke-linecap='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M8 3v4M16 3v4M3 10h18'/%3E%3C/svg%3E");background-repeat:no-repeat;background-size:1rem;background-position:.75rem 50%}
+.tp-icon.tp-icon:dir(rtl){background-position:calc(100% - .75rem) 50%}
+
 .tp-foot{display:flex;justify-content:space-between;margin-top:.5rem}
 .tp-btn{padding:.25rem .5rem;border:0;border-radius:var(--tp-radius);background:none;color:var(--tp-accent);font:inherit;cursor:pointer}
 .tp-btn:hover{background:var(--tp-hover)}
