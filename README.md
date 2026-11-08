@@ -44,7 +44,7 @@ el.addEventListener('change', (e) => console.log(e.detail)); // also: open, clos
 await el.ready;                 // resolves with the underlying Datepicker
 ```
 
-The input is styled out of the box to match the calendar (border, radius and colours, light and dark, red border on invalid input). Restyle it with `::part(input)` and `::part(toggle)`, e.g. `ten-protons-datepicker::part(input) { border-radius: 0 }`. The calendar button is the web component's own icon, so `showIcon` doesn't apply to it.
+The input is styled out of the box to match the calendar (border, radius and colours, light and dark, red border on invalid input). Restyle it with `::part(input)` and `::part(toggle)`, e.g. `ten-protons-datepicker::part(input) { border-radius: 0 }`. The calendar button is the web component's own icon (at the start of the field, like `showIcon` on a plain input), so `showIcon` doesn't apply to it.
 
 ### Vue
 
