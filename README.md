@@ -196,13 +196,13 @@ const dp = withTime(new Datepicker(input, { dateFormat: 'dd.MM.yyyy', onChange: 
 
 How it behaves:
 
-- **Picking.** A newly picked day gets the time currently shown in the selector (`00:00:00` until you change it). Editing the selector immediately changes the time of the selected date(s) and fires `change`. Each field is a spinbutton: type digits, `↑` / `↓` (wraps), `Home` / `End`; values are clamped on blur / `Enter`.
+- **Picking.** A newly picked day gets the time currently shown in the selector (`00:00:00` until you change it). Editing the selector immediately changes the time of the selected date(s) and fires `change`. The fields are buttons: tap or click **hours**, **minutes** or **seconds** to open a grid of its values in place of the days (hours 6 × 4, minutes and seconds 10 × 6, multiples of 5 in bold), tap a value to set it and return to the days. To change another unit, tap its field; there is no auto-advance. Tapping the open field, the `‹` back button, `Escape`, **Today** or **Clear** also return to the days, and so does closing the popup. The popup keeps its size while the grid is shown.
 - **The popup stays open** after picking a day so you can set the time (`closeOnSelect` defaults to `false` with `enableTime`). Close it with `Escape`, `Enter` in the input, or a click outside.
 - **Display.** The input shows the date in your `dateFormat` followed by the time as `HH:mm:ss` (24-hour): `15.03.2025 13:07:09`. `dateFormat` only controls the date part. The time format is fixed.
 - **Typing.** `15.03.2025 13:07:09`, `15.03.2025 13:07` (seconds default to 0), ISO `2025-03-15T13:07:09` (or with a space), and Unix timestamps. A date typed **without** a time takes the time currently in the selector. An invalid time (`24:00`, `10:60`) is rejected like any invalid date.
 - **Range and multiple.** One time applies to all selected dates: the selector sets every date at once. Text typed with different times per date (`10.03.2025 09:00:00 - 12.03.2025 18:30:00`) keeps them until you touch the selector.
 - **Limits are day-based.** `minDate`, `maxDate` and the disabled-date options compare calendar days; they don't constrain the time of day.
-- **Screen readers.** The selector is a labelled group (`time` / `hours` / `minutes` / `seconds` strings, overridable in the `locale` object, translated in `locales/uk`), and the selection announcement includes the time.
+- **Screen readers.** The selector is a labelled group of buttons named by unit and value ("Hours, 13", `aria-haspopup="listbox"`, `aria-expanded`); each grid is a `listbox` of `option`s labelled by the unit, and focus returns to the field after a pick, so the new value is read out. The strings (`time` / `hours` / `minutes` / `seconds` / `back`) are overridable in the `locale` object and translated in `locales/uk`; the selection announcement includes the time.
 - **Switching at runtime.** `setOptions({ enableTime })` adds `00:00:00` to selected dates or drops their time.
 
 ### Time and `outputTimestamp`
@@ -303,14 +303,18 @@ Things to know:
 | `Home` / `End` | start / end of the week |
 | `PageUp` / `PageDown` | previous / next month; with `Shift`, previous / next year |
 | `Enter` / `Space` | select |
-| `Escape` | close, focus returns to where it came from |
+| `Escape` | close, focus returns to where it came from; with a time grid open it closes the grid first and returns focus to its field |
 | `Tab` | cycles inside the dialog (`aria-modal`), including the time fields |
+| `Enter` / `Space` on a time field | open its grid (a second tap closes it) |
+| `← → ↑ ↓` in a time grid | previous / next value, up / down a row (← → mirror in RTL; no wrapping) |
+| `Home` / `End` in a time grid | first / last value |
+| `Enter` / `Space` on a time value | set it, close the grid, focus returns to the field |
 
 Opening with the mouse keeps focus in the input so you can keep typing; opening with the keyboard, the toggle button or `open()` moves focus into the grid.
 
 ## Localisation
 
-Month and weekday names, the default numeric format, first weekday and direction come from `Intl`. UI strings default to English (`today` is localised through `Intl.RelativeTimeFormat`). The strings are `today clear prevMonth nextMonth label selected` and, for the time selector, `time hours minutes seconds`. Override what you need:
+Month and weekday names, the default numeric format, first weekday and direction come from `Intl`. UI strings default to English (`today` is localised through `Intl.RelativeTimeFormat`). The strings are `today clear prevMonth nextMonth label selected` and, for the time selector, `time hours minutes seconds back`. Override what you need:
 
 ```ts
 new Datepicker(input, { locale: { code: 'de', clear: 'Löschen', prevMonth: 'Voriger Monat', nextMonth: 'Nächster Monat', label: 'Datum wählen', selected: 'Ausgewählt' } });

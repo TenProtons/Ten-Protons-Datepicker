@@ -434,6 +434,7 @@ export class Datepicker extends EventTarget {
     this.hover = null;
     this.isOpen = false;
     cal.el.hidden = true;
+    cal.reset();
     this.openOffs.splice(0).forEach((f) => f());
     this.input?.setAttribute('aria-expanded', 'false');
     if (hadFocus) (this.opener?.isConnected ? this.opener : this.el).focus({ preventScroll: true });

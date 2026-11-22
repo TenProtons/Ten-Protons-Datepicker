@@ -8,7 +8,9 @@ export interface TimeUIOptions {
   loc: Locale;
   cls: ClassNames;
   id: string;
-  /** Call with the new time whenever the user edits a field. */
+  /** The months block: the selector shows its value grids over it. */
+  months: HTMLElement;
+  /** Call with the new time whenever the user picks a value. */
   change(time: Time): void;
 }
 
@@ -17,6 +19,8 @@ export interface TimeUI {
   el: HTMLElement;
   /** Shows `time` (without echoing a `change`). */
   set(time: Time): void;
+  /** Leaves an open value grid for the days (`focus`: back to the field that opened it). `false` if none was open. */
+  close(focus?: boolean): boolean;
 }
 
 export type TimeUIFactory = (options: TimeUIOptions) => TimeUI;

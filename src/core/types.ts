@@ -22,11 +22,12 @@ export interface LocaleStrings {
   nextMonth: string;
   /** Accessible name of the calendar dialog. */
   label: string;
-  /** Time selector (`enableTime`): group name and the three field names. */
+  /** Time selector (`enableTime`): group name, the three field names and the value grid's back button. */
   time: string;
   hours: string;
   minutes: string;
   seconds: string;
+  back: string;
   /** Prefix of the screen-reader announcement, e.g. "Selected: Wednesday, March 5, 2025". */
   selected: string;
 }
@@ -66,9 +67,14 @@ export interface ClassNames {
   rangeEnd: string;
   foot: string;
   btn: string;
-  /** Time selector row and its number fields (`enableTime`). */
+  /** Time selector row and its field buttons (`enableTime`). */
   time: string;
   timeField: string;
+  /** The value grid that replaces the days: overlay, scrollable list, option, and options that are multiples of 5. */
+  timePanel: string;
+  timeList: string;
+  timeOpt: string;
+  timeFive: string;
   /** Visually hidden (screen-reader only) text. */
   sr: string;
 }
