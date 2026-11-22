@@ -2,7 +2,7 @@
 
 **Audience: Claude (or any engineer) starting a new session with empty context.** Read this first, then `CLAUDE.md` (project rules, read automatically), then the code. It is internal: not listed in `package.json#files`, so it is not published to npm. `README.md` is the *user-facing* doc; this file is the *how it works and why* doc.
 
-Snapshot: package `ten-protons-datepicker` v1.1.2, HEAD `28e4f0a` ("Merge pull request #6 from TenProtons/fix-reset") plus the uncommitted tap-to-grid time selector (§7.4), updated 2026-11-22. Size figures and line counts below are from the older `b5396cc` snapshot. If the code disagrees with this file, the code wins; fix this file.
+Snapshot: package `ten-protons-datepicker` v2.0.0 (the tap-to-grid time selector, §7.4, replaced the typed time fields), HEAD `28e4f0a` ("Merge pull request #6 from TenProtons/fix-reset") plus uncommitted changes, updated 2026-11-22. Size figures and line counts below are from the older `b5396cc` snapshot. If the code disagrees with this file, the code wins; fix this file.
 
 ## Contents
 1. [Status in one screen](#1-status-in-one-screen)
@@ -282,7 +282,7 @@ If asked to (re)build tests, this is the recipe that worked (Node 22, Windows, G
 
 * `npm run build` = `tsup` (`format: ['esm']`, `target: es2020`, `splitting: true`, `minify`, `dts`, `clean`, `loader {'.css':'text'}`; `onSuccess` copies `core.css`/`themes.css` into `dist/`). Entries: `index`, `range`, `multiple`, `time`, `wc`, `locales/uk`. **ESM-only is required**: the mode/time/locale registries must be shared between entries, which needs the shared chunks (observed: `index.js` re-exports from `chunk-*.js`; `range.js`/`time.js` import the registry chunks). `npm run demo` = build + `npx serve . -l 5173` → `http://localhost:5173/demo/`.
 * The WC dynamically `import()`s `../modules/range|multiple|time`, which esbuild resolves to the entry files — keep those paths and entry names aligned.
-* Pre-publish checklist (user runs `npm publish`): `typecheck`, `build`, inspect `npm pack --dry-run` (only `dist`, `README.md`, `LICENSE`, `package.json`), check the name is free (`npm view ten-protons-datepicker`), decide the version (currently `0.1.0`; the original spec said "Version 1"), confirm the MIT holder name, consider adding `repository`/`homepage`/`bugs` fields (absent), and size-check against the spec (§1).
+* Pre-publish checklist (user runs `npm publish`): `typecheck`, `build`, inspect `npm pack --dry-run` (only `dist`, `README.md`, `LICENSE`, `package.json`), check the name is free (`npm view ten-protons-datepicker`), check the version (currently `2.0.0`), confirm the MIT holder name, consider adding `repository`/`homepage`/`bugs` fields (absent), and size-check against the spec (§1).
 * Measuring size without rebuilding: `cat dist/index.js dist/chunk-*.js | gzip -9 | wc -c` (add `range.js`/`time.js` for the combos).
 
 ## 11. Known limitations and open items
