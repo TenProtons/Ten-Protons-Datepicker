@@ -34,6 +34,7 @@ const EN: LocaleStrings = {
   hours: 'Hours',
   minutes: 'Minutes',
   seconds: 'Seconds',
+  back: 'Back to calendar',
 };
 
 // Always the Gregorian calendar, so `ar-SA` / `th-TH` don't silently switch calendar systems.

@@ -301,7 +301,8 @@
         <p>
           <code>enableTime</code> adds a 24-hour
           hours&nbsp;:&nbsp;minutes&nbsp;:&nbsp;seconds selector below the
-          calendar (the popup stays open so you can set it). Type
+          calendar (the popup stays open so you can set it). Tap a field to pick
+          its value from a grid. Type
           <code>15/03/2025 13:07:09</code>, <code>2025-03-15T13:07</code>
           or paste a timestamp. In a range one time applies to both ends.
         </p>
@@ -321,6 +322,15 @@
           placeholder="Pick or type a range with times"
         />
         <output id="datetime-range-out"></output>
+        <label for="datetime-uk-input" style="margin-top: 0.75rem"
+          >Ukrainian, two months</label
+        >
+        <input
+          type="text"
+          id="datetime-uk-input"
+          placeholder="Оберіть дату і час"
+        />
+        <output id="datetime-uk-out"></output>
       </section>
 
       <section id="inline">
@@ -654,6 +664,20 @@
           range,
           () => "range",
           readout($("#datetime-range-out"), range, true),
+          true,
+        );
+
+        const uk = withTime(
+          new Datepicker($("#datetime-uk-input"), {
+            locale: "uk",
+            numberOfMonths: 2,
+          }),
+        );
+        track(
+          "datetime uk",
+          uk,
+          () => "single",
+          readout($("#datetime-uk-out"), uk, true),
           true,
         );
       }

@@ -25,6 +25,10 @@ export const CLASSES: ClassNames = {
   btn: 'tp-btn',
   time: 'tp-time',
   timeField: 'tp-time-field',
+  timePanel: 'tp-time-panel',
+  timeList: 'tp-time-list',
+  timeOpt: 'tp-time-opt',
+  timeFive: 'tp-time-five',
   sr: 'tp-sr',
 };
 
@@ -88,7 +92,7 @@ interface Panel {
   cells: Cell[];
 }
 
-const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', attrs: Record<string, string> = {}): HTMLElementTagNameMap[K] => {
+export const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', attrs: Record<string, string> = {}): HTMLElementTagNameMap[K] => {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
   for (const k in attrs) e.setAttribute(k, attrs[k]!);
@@ -134,7 +138,7 @@ export class Calendar {
       foot.append(b);
     }
     this.live = h('div', cls.sr, { 'aria-live': 'polite', 'aria-atomic': 'true' });
-    this.timeUI = o.time?.({ loc, cls, id: o.id, change: on.time });
+    this.timeUI = o.time?.({ loc, cls, id: o.id, months, change: on.time });
     root.append(months, ...(this.timeUI ? [this.timeUI.el] : []), foot, this.live);
     this.prev = root.querySelector<HTMLElement>('[data-a=prev]')!;
     this.next = root.querySelector<HTMLElement>('[data-a=next]')!;
@@ -144,6 +148,7 @@ export class Calendar {
       const td = dayOf(e);
       if (td) return on.pick(fromKey(+td.dataset.k!));
       const a = (e.target as HTMLElement).closest<HTMLElement>('[data-a]')?.dataset.a;
+      if (a) this.reset(); // Today / Clear show the days again
       if (a === 'prev') on.nav(-1);
       else if (a === 'next') on.nav(1);
       else if (a === 'today') on.today();
@@ -169,6 +174,11 @@ export class Calendar {
 
   focusCell(): void {
     this.focusTd?.focus({ preventScroll: true });
+  }
+
+  /** Back to the days (closes the time selector's value grid). */
+  reset(): void {
+    this.timeUI?.close();
   }
 
   /** Screen-reader announcement (the live region is the only text that changes). */
@@ -277,6 +287,7 @@ export class Calendar {
   private onKey(e: KeyboardEvent): void {
     const { loc, on, inline } = this.o;
     if (e.key === 'Escape') {
+      if (this.timeUI?.close(true)) return e.stopPropagation(); // an open value grid closes first
       if (inline) return;
       e.stopPropagation();
       return on.close();
@@ -297,9 +308,9 @@ export class Calendar {
     }
   }
 
-  /** aria-modal: Tab wraps inside the dialog. */
+  /** aria-modal: Tab wraps inside the dialog (the months under an open value grid are `inert`). */
   private trapTab(e: KeyboardEvent): void {
-    const f = [...this.el.querySelectorAll<HTMLElement>('button, input, td[tabindex="0"]')];
+    const f = [...this.el.querySelectorAll<HTMLElement>('button, [tabindex="0"]')].filter((x) => !x.closest('[inert]'));
     const [first, last] = [f[0], f[f.length - 1]];
     const edge = e.shiftKey ? first : last;
     if (e.target === edge || !f.includes(e.target as HTMLElement)) {
