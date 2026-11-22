@@ -2,11 +2,12 @@ import { h } from '../core/Calendar';
 import type { Datepicker } from '../core/Datepicker';
 import { registerTimeUI, type Time } from '../core/time';
 
-// [name, options, columns]: hours 6 x 4, minutes and seconds 10 x 6 (row = tens digit).
+// [name, options, columns]: hours 6 x 4, minutes and seconds 5 x 12 (a row per 5 minutes, so the bold multiples of 5 line up).
+// The column count is the one source for the CSS (`--tp-cols`) and the arrow keys.
 const FIELDS = [
   ['hours', 24, 6],
-  ['minutes', 60, 10],
-  ['seconds', 60, 10],
+  ['minutes', 60, 5],
+  ['seconds', 60, 5],
 ] as const;
 const pad = (n: number): string => String(n).padStart(2, '0');
 
@@ -63,19 +64,18 @@ registerTimeUI(({ loc, cls, id, months, change }) => {
       o.setAttribute('aria-selected', String(on));
     });
 
-  /** Scrolls the list (only the list: `scrollIntoView` could move the page) just enough to show `o`. */
-  const see = (o: HTMLElement) => {
-    const { offsetTop: top, offsetHeight: height } = o;
-    if (top < list.scrollTop) list.scrollTop = top;
-    else if (top + height > list.scrollTop + list.clientHeight) list.scrollTop = top + height - list.clientHeight;
-  };
-
-  /** Roving tabindex: `o` becomes the grid's single tab stop and takes focus. */
-  const focusOpt = (o: HTMLElement) => {
+  /**
+   * Roving tabindex: `o` becomes the grid's single tab stop and takes focus. Only the list is scrolled, by hand
+   * (`scrollIntoView` and a plain `focus()` could move the page): centred on open, else just enough to show `o`.
+   */
+  const focusOpt = (o: HTMLElement, centre = false) => {
     list.querySelector<HTMLElement>('[tabindex="0"]')?.setAttribute('tabindex', '-1');
     o.tabIndex = 0;
     o.focus({ preventScroll: true });
-    see(o);
+    const { offsetTop: top, offsetHeight: height } = o;
+    if (centre) list.scrollTop = top - (list.clientHeight - height) / 2;
+    else if (top < list.scrollTop) list.scrollTop = top;
+    else if (top + height > list.scrollTop + list.clientHeight) list.scrollTop = top + height - list.clientHeight;
   };
 
   const show = (i: number) => {
@@ -88,7 +88,7 @@ registerTimeUI(({ loc, cls, id, months, change }) => {
     );
     mark();
     sync();
-    focusOpt(list.children[time[i]!] as HTMLElement);
+    focusOpt(list.children[time[i]!] as HTMLElement, true);
   };
 
   const close = (focus = false): boolean => {
