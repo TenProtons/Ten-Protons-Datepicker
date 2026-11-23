@@ -14,6 +14,11 @@ const str = (v: string | null) => v ?? undefined;
 const num = (v: string | null) => (v === null ? undefined : Number(v));
 const bool = (v: string | null) => (v === null ? undefined : v !== 'false');
 const list = (v: string | null) => (v === null ? undefined : v.split(',').map(Number));
+// `1900-2100`: two integers; anything else is ignored (the picker's default range).
+const years = (v: string | null) => {
+  const m = /^\s*(\d+)\s*-\s*(\d+)\s*$/.exec(v ?? '');
+  return m ? [+m[1]!, +m[2]!] : undefined;
+};
 // `value` is a list of ISO dates / timestamps (`a`, `a/b`, `a,b`). The picker parses and converts each, so `value-in-utc` applies.
 const tokens = (v: string) => v.split(/\s*[/,;]\s*/).filter(Boolean);
 // Attribute text of a date property: a `Date` becomes its ISO string (the picker reads the same instant back); empty or invalid gives `null`.
@@ -31,6 +36,7 @@ const ATTRS: Record<string, [keyof DatepickerOptions, (v: string | null) => unkn
   position: ['position', str],
   theme: ['theme', str],
   'number-of-months': ['numberOfMonths', num],
+  'year-range': ['yearRange', years],
   'show-other-months': ['showOtherMonths', bool],
   'allow-input': ['allowInput', bool],
   'close-on-select': ['closeOnSelect', bool],
@@ -52,7 +58,7 @@ const Base: typeof HTMLElement = typeof HTMLElement === 'undefined' ? (class {} 
  * `<ten-protons-datepicker>` (alias `<x-datepicker>`): an input + calendar toggle with the popup inside its shadow root.
  *
  * Attributes: `value` (ISO or Unix seconds, ranges `a/b`, multiple `a,b`), `name`, `placeholder`, `label`, `disabled`,
- * `mode`, `locale`, `min`, `max`, `date-format`, `first-day`, `position`, `theme`, `number-of-months`,
+ * `mode`, `locale`, `min`, `max`, `date-format`, `first-day`, `position`, `theme`, `number-of-months`, `year-range` (`1900-2100`),
  * `show-other-months`, `allow-input`, `close-on-select`, `disabled-days`, `output-timestamp`, `enable-time`, `value-in-utc`, `inline`.
  * Events (bubbling, composed): `change`, `open`, `close`, `monthChange`, `yearChange` with `detail`.
  * Style with `::part(input)`, `::part(toggle)` and the `--tp-*` custom properties.

@@ -235,7 +235,9 @@
           Click the field, or focus it and press <kbd>↓</kbd>. In the calendar
           use arrows, <kbd>PageUp</kbd>/<kbd>PageDown</kbd> (<kbd>Shift</kbd> =
           year), <kbd>Home</kbd>/<kbd>End</kbd>, <kbd>Enter</kbd>,
-          <kbd>Esc</kbd>.
+          <kbd>Esc</kbd>. The month and the year in the header are buttons too:
+          click one to jump through a grid (try typing <kbd>5</kbd> in the year
+          grid).
         </p>
         <label for="single-input">Date</label>
         <input
@@ -292,6 +294,23 @@
           type="text"
           id="multiple-input"
           placeholder="Pick several dates"
+        />
+        <output></output>
+      </section>
+
+      <section id="birth">
+        <h2>Birth date</h2>
+        <p>
+          <code>minDate: '1900-01-01'</code> and today as the maximum: the year
+          grid lists 1900 … this year, centred on the year on show. Click the
+          year in the header and type <kbd>1</kbd><kbd>9</kbd><kbd>7</kbd> to
+          jump to 1970.
+        </p>
+        <label for="birth-input">Date of birth</label>
+        <input
+          type="text"
+          id="birth-input"
+          placeholder="Pick or type a date"
         />
         <output></output>
       </section>
@@ -637,6 +656,22 @@
           dp,
           () => "multiple",
           readout($("output", $("#multiple")), dp),
+        );
+      }
+
+      // ---- birth date (minDate alone sets where the year grid starts)
+      {
+        const dp = new Datepicker($("#birth-input"), {
+          locale: "en-GB",
+          minDate: "1900-01-01",
+          maxDate: today(),
+          defaultDate: "1990-06-15",
+        });
+        track(
+          "birth",
+          dp,
+          () => "single",
+          readout($("output", $("#birth")), dp),
         );
       }
 

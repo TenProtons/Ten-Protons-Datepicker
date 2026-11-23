@@ -2,23 +2,49 @@
 
 Zero-dependency, accessible, framework-agnostic datepicker. Vanilla TypeScript + a native Web Component.
 
-- WAI-ARIA date picker dialog pattern, full keyboard support, live-region announcements
-- Single, range and multiple selection, and an optional time selector, as separate, tree-shakeable modules
-- Popup or inline calendar, one or two months, `<input>` binding or a ready-made `<ten-protons-datepicker>` Web Component
-- Form-associated Web Component: takes part in `<form>` submission and reset
-- `min` / `max` dates, disabled dates, disabled weekdays
-- Accepts `Date`, ISO strings (date or date-time, with or without a zone) and Unix timestamps; can report Unix timestamps back (`outputTimestamp`)
-- `valueInUtc`: your backend speaks UTC, the picker shows local time, and the conversion happens inside the picker
-- `Intl`-based localisation, RTL, locale-derived input format, first day of week
-- Manual input that is parsed on blur / Enter and validated against min / max / disabled dates
-- CSS variables, light / dark (`prefers-color-scheme` or `data-theme`), replaceable class names
-- ESM only, strict TypeScript types, no runtime dependencies
+## Highlights
 
-**Works with any framework.** The datepicker is a standard Web Component on top of a plain TypeScript class, so it needs no framework adapter. Use it in Vue, React, Angular, Svelte, SolidJS, Lit, Alpine.js, Astro or plain HTML/JS: set attributes, listen to `change`. A Vue example is [below](#vue).
+### Unix timestamps in and out: `outputTimestamp`
+
+Backends, databases and tokens often store dates as Unix seconds, so every app ends up converting between a `Date`, a formatted string and a number by hand. The picker understands timestamps on input with no option (type, paste or pass them), and with `outputTimestamp: true` it reports them back instead of `Date`s / ISO strings, in the web component's form value too.
+
+```ts
+const dp = new Datepicker(input, { outputTimestamp: true, onChange: (ts) => save(ts) });
+// the user picks 15 March 2025: ts === 1741996800 (browser in UTC)
+```
+
+Details: [Unix timestamps](#unix-timestamps), and with a time of day [Time and `outputTimestamp`](#time-and-outputtimestamp).
+
+### UTC backends without conversion code: `valueInUtc`
+
+Many backends only speak UTC while users pick dates in their own time zone, so every app writes the same conversion code and gets it subtly wrong around midnight. The classic result: a user in Kyiv (UTC+2) picks 15 March, the picker returns a `Date` for **local** midnight, `toISOString()` sends `2025-03-14T22:00:00.000Z`, and the backend stores the 14th. With `valueInUtc: true` (`value-in-utc` on the web component) the picker does the conversion inside: values going in and out are UTC, what the user sees and edits stays local.
+
+```ts
+const dp = new Datepicker(input, { valueInUtc: true });
+dp.getDate().toISOString(); // '2025-03-15T00:00:00.000Z' for 15 March, in every time zone
+```
+
+Details: [UTC backends](#utc-backends-valueinutc).
+
+## Features
+
+- Single, range and multiple selection, and an optional date & time selector (hours : minutes : seconds), as separate, tree-shakeable modules: [Imperative API](#imperative-api), [Date & time](#date--time)
+- Click the month or year in the header to jump straight to any month or year through a grid (keyboard, type-ahead and screen-reader friendly); navigation only, it never changes the selection: [Month and year grids](#month-and-year-grids)
+- Popup or inline calendar, one or two months, `<input>` binding or a ready-made `<ten-protons-datepicker>` Web Component, which is form-associated: it takes part in `<form>` submission and reset
+- **Works with any framework.** The datepicker is a standard Web Component on top of a plain TypeScript class, so it needs no framework adapter. Use it in Vue, React, Angular, Svelte, SolidJS, Lit, Alpine.js, Astro or plain HTML/JS: set attributes, listen to `change`. A Vue example is [below](#vue)
+- WAI-ARIA date picker dialog pattern, full [keyboard](#keyboard) support, live-region announcements
+- `Intl`-based [localisation](#localisation), RTL, locale-derived input format, first day of week
+- Manual input that is parsed on blur / Enter and validated against min / max / disabled dates: [Input handling](#input-handling)
+- `min` / `max` dates, disabled dates, disabled weekdays
+- Accepts `Date`, ISO strings (date or date-time, with or without a zone) and Unix timestamps
+- CSS variables, light / dark (`prefers-color-scheme` or `data-theme`), replaceable class names: [Theming](#theming)
+- ESM only, strict TypeScript types, no runtime dependencies
 
 | Light | Dark | Range |
 | --- | --- | --- |
 | ![Calendar popup, light theme, with a selected day and today highlighted](https://raw.githubusercontent.com/TenProtons/Ten-Protons-Datepicker/main/docs/images/popup-light.png) | ![Calendar popup, dark theme](https://raw.githubusercontent.com/TenProtons/Ten-Protons-Datepicker/main/docs/images/popup-dark.png) | ![Range selection: the start day is selected and the days up to the hovered end day are previewed](https://raw.githubusercontent.com/TenProtons/Ten-Protons-Datepicker/main/docs/images/range.png) |
+
+## Install
 
 ```sh
 npm i ten-protons-datepicker
@@ -44,6 +70,7 @@ npm i ten-protons-datepicker
 | `value` | ISO: `2025-03-05`, range `2025-03-01/2025-03-10`, multiple `2025-03-01,2025-03-05`. Unix timestamps work too; with `output-timestamp` the property returns them. See [Unix timestamps](#unix-timestamps) |
 | `name`, `placeholder`, `label`, `disabled` | `label` is the input's accessible name. Form-associated where `ElementInternals` exists |
 | `mode`, `locale`, `min`, `max`, `date-format`, `first-day`, `position`, `theme` | see [Options](#options) |
+| `year-range` | `1900-2100`: two integers separated by `-`, see `yearRange` in [Options](#options). Anything else is ignored (the default range) |
 | `number-of-months`, `show-other-months`, `allow-input`, `close-on-select`, `disabled-days`, `output-timestamp`, `enable-time`, `value-in-utc`, `inline` | booleans: present = true, `="false"` = false |
 
 ```js
@@ -59,7 +86,7 @@ el.max = new Date(2026, 11, 31);
 el.value = new Date();          // range / multiple: an array, el.value = [start, end]
 ```
 
-The input is styled out of the box to match the calendar (border, radius and colours, light and dark, red border on invalid input). Restyle it with `::part(input)` and `::part(toggle)`, e.g. `ten-protons-datepicker::part(input) { border-radius: 0 }`. The calendar button is the web component's own icon (at the start of the field, like `showIcon` on a plain input), so `showIcon` doesn't apply to it.
+The input is styled out of the box to match the calendar (border, radius and colours, light and dark, red border on invalid input). Restyle it with `::part(input)` and `::part(toggle)`, e.g. `ten-protons-datepicker::part(input) { border-radius: 0 }`. The calendar button is the web component's own icon (at the start of the field, like `showIcon` on a plain input).
 
 ### Vue
 
@@ -82,7 +109,7 @@ Tell Vue that the tag is a custom element (Vite: `vue({ template: { compilerOpti
 </template>
 ```
 
-Attributes such as `theme` and `max` can be bound the same way. `min`, `max` and `value` accept a `Date` as well as an ISO string or a Unix timestamp: Vue sets a property when the element has one, so `:max="maxDate"` works with a `Date` directly. Written as plain HTML attributes (`max="…"`) they are strings, so use an ISO string or a timestamp there. The element is created and destroyed with the component, so there is nothing to clean up. Other frameworks work the same: set attributes, listen to `change`.
+Attributes such as `theme` and `max` can be bound the same way. `min`, `max` and `value` accept a `Date` as well as an ISO string or a Unix timestamp: Vue sets a property when the element has one, so `:max="maxDate"` works with a `Date` directly. Written as plain HTML attributes (`max="…"`) they are strings, so use an ISO string or a timestamp there. The element is created and destroyed with the component, so there is nothing to clean up.
 
 ## Imperative API
 
@@ -112,12 +139,13 @@ With `inline: true` the calendar renders inside the given element (any element, 
 | --- | --- | --- |
 | `mode` | `'single'` | `'single' \| 'range' \| 'multiple'` |
 | `selected`, `defaultDate` | | initial value / month shown when empty. Same types as `minDate` (`selected` also takes an array) |
-| `minDate`, `maxDate` | | `Date`, an ISO string (`2025-03-15`, or a date-time such as `2025-03-15T13:07:09`, `2025-03-15T13:07:09.724Z`, `2025-03-15T13:07:09+02:00`), or a Unix timestamp in seconds (`DateInput`; also accepted by `selected`, `setDate`). Limits compare calendar days, so the time of day is ignored; zones follow [`valueInUtc`](#utc-backends-valueinutc). An unparseable value is ignored, i.e. no limit |
+| `minDate`, `maxDate` | | `Date`, an ISO string (`2025-03-15`, or a date-time such as `2025-03-15T13:07:09`, `2025-03-15T13:07:09.724Z`, `2025-03-15T13:07:09+02:00`), or a Unix timestamp in seconds (`DateInput`; also accepted by `selected`, `setDate`). Limits are day-based, see [Date & time](#date--time); zones follow [`valueInUtc`](#utc-backends-valueinutc). An unparseable value is ignored, i.e. no limit |
 | `disabledDates`, `disabledDaysOfWeek` | | `Date[]` or `(date) => boolean`; `0` = Sunday |
 | `locale` | browser | BCP 47 tag or a `LocaleObject` |
 | `firstDayOfWeek` | from locale | `0`–`6` |
 | `dateFormat` | from locale | tokens: `yyyy yy MMMM MMM MM M dd d EEEE EEE`, quote literals: `d 'de' MMMM` |
 | `inline`, `showOtherMonths`, `numberOfMonths` | `false`, `false`, `1` | `numberOfMonths: 1 \| 2` |
+| `yearRange` | this year ± 100 | `[from, to]`, absolute years, both inclusive: the years the header's year grid lists. The years of `minDate` / `maxDate` replace the matching end (so `minDate: '1900-01-01'` alone lists 1900 up to this year + 100), and the list always includes the years on show. Limited to 1–9999; a reversed or invalid range is ignored. See [Month and year grids](#month-and-year-grids) |
 | `position` | `'auto'` | `auto top bottom left right`; auto flips above when there is no room below |
 | `theme` | auto | `'light' \| 'dark'` |
 | `allowInput` | `true` | `false` makes the input read-only |
@@ -172,10 +200,24 @@ const dp = new Datepicker(input, { dateFormat: 'dd.MM.yyyy', outputTimestamp: tr
 
 Things to know:
 
-- **Day granularity (without `enableTime`).** A date-only picker selects days, not instants; with [`enableTime`](#date--time) the time of day is kept too. A timestamp is converted to the **local** calendar day it falls on, and the timestamp that comes out is the **local midnight** of that day. So `timestamp -> timestamp` normalises the time of day (`1794072736` comes back as `1794009600`), and it is stable from then on: feeding the output back in gives the same value.
-- **Time zones.** "Local" is the browser's time zone, in line with the rest of the picker. A timestamp for UTC midnight (`1741996800` = 2025-03-15T00:00Z) is still March 14 in New York. If your backend stores UTC-midnight timestamps for plain dates, set [`valueInUtc`](#utc-backends-valueinutc): `1741996800` is then 15 March in every time zone.
-- **Seconds only.** Millisecond timestamps (13 digits) are not recognised.
+- **Day granularity (without `enableTime`).** A date-only picker selects days, not instants; with [`enableTime`](#date--time) the time of day is kept too. A timestamp is converted to the **local** calendar day it falls on, and the timestamp that comes out is the **local midnight** of that day. So `timestamp -> timestamp` normalises the time of day (`1794072736` comes back as `1794009600`), and it is stable from then on: feeding the output back in gives the same value. What "local" means, and how to work in UTC instead, is covered under [UTC backends](#utc-backends-valueinutc).
+- **Seconds only.** Millisecond timestamps (13 digits) are not recognised, and dates are kept to the second: milliseconds are dropped.
+- **Before 1970.** `outputTimestamp` reports negative seconds for earlier dates, and a negative `number` passed to `selected` / `setDate()` / `minDate` / `maxDate` is understood. Text and strings are not:
+  - Typed text containing a negative timestamp is **rejected as invalid** like any other invalid input (`aria-invalid` on Enter, reverted on blur), and a `-123456789` string given to `selected` or the web component's `value` is ignored.
+  - A `-` in front of a timestamp is a minus sign when the text starts there or the previous character is another separator (`-`, `–`, `—`, `/`, `,`, `;`): `-1000000000`, `1741996800, -1742428800`, `1741996800 - -1742428800` and `1741996800/-1742428800` are all invalid.
+  - After a digit it stays the range separator: `1741996800-1742428800`, `1741996800 - 1742428800` and `1741996800 -1742428800` all work, and so do ISO dates with dashes.
+  - Typed dates (`01.01.1900`) and ISO strings (`1900-01-01`) work for any year from 1 to 9999; feed such values back as ISO or `Date`, not as typed timestamps.
 - **Types.** `DatepickerValue` is `Date | Date[] | number | number[] | null`; narrow it with `typeof` / `instanceof` or check `outputTimestamp` yourself. With the default nothing changes at runtime.
+
+## Month and year grids
+
+The month and the year in each calendar header are buttons (`aria-haspopup="listbox"`, named "Month, November" / "Year, 2026"). Click one to open a grid in place of the days:
+
+- **Months:** the 12 standalone month names (`листопад`, not the in-date `листопада`) in 3 columns. The month on show is selected and the current month is marked like today. A month entirely outside `minDate` / `maxDate` is dimmed (`aria-disabled`) and can't be picked.
+- **Years:** 4 columns in a scrolling list, centred on the year on show, with a thin scrollbar. The list comes from [`yearRange`](#options), `minDate` and `maxDate`. Opening it with the full 1–9999 range creates 9,999 options, which is fine but is the practical maximum.
+- **Navigation only.** A pick changes what is shown and where the keyboard focus is, never the selection: `change` does not fire and an unfinished range pick survives. `monthChange` / `yearChange` fire as usual. The focus keeps its day of the month (31 January → 28 February) and is clamped to `minDate` / `maxDate`; picking a year keeps the month (clamped to the nearest allowed month). With `numberOfMonths: 2` the chosen month stays in the panel it was chosen from.
+- **One grid at a time.** The grid shares its panel with the time grids; opening one closes the other. Tapping the open button again, the `‹` back button, `Escape`, **Today**, **Clear** and closing the popup return to the days. The popup keeps its size while a grid is shown. Calling `jumpToDate()`, `setDate()` or `setRange()` while a grid is open closes it (focus moves to its button only if it was inside the grid).
+- **Always on, in core:** no option, no extra import; popup, inline, the web component and one or two months.
 
 ## Date & time
 
@@ -196,25 +238,24 @@ const dp = withTime(new Datepicker(input, { dateFormat: 'dd.MM.yyyy', onChange: 
 
 How it behaves:
 
-- **Picking.** A newly picked day gets the time currently shown in the selector (`00:00:00` until you change it). Editing the selector immediately changes the time of the selected date(s) and fires `change`. The fields are buttons: tap or click **hours**, **minutes** or **seconds** to open a grid of its values in place of the days (day-sized cells: hours 6 × 4, minutes and seconds 5 × 12, one row per 5 minutes with the multiples of 5 in bold down the first column; the minutes and seconds list scrolls, with a thin scrollbar), tap a value to set it and return to the days. To change another unit, tap its field; there is no auto-advance. Tapping the open field, the `‹` back button, `Escape`, **Today** or **Clear** also return to the days, and so does closing the popup. The popup keeps its size while the grid is shown.
+- **Picking.** A newly picked day gets the time currently shown in the selector (`00:00:00` until you change it). Editing the selector immediately changes the time of the selected date(s) and fires `change`. The fields are buttons: tap or click **hours**, **minutes** or **seconds** to open a grid of its values in place of the days (day-sized cells: hours 6 × 4, minutes and seconds 5 × 12, one row per 5 minutes with the multiples of 5 in bold down the first column; the minutes and seconds list scrolls, with a thin scrollbar), tap a value to set it and return to the days (the same grid as the [month and year grids](#month-and-year-grids), with the same keys, including `PageUp` / `PageDown` and typing a value: `4`, `45`, `05`, and the same ways back to the days). To change another unit, tap its field; there is no auto-advance.
 - **The popup stays open** after picking a day so you can set the time (`closeOnSelect` defaults to `false` with `enableTime`). Close it with `Escape`, `Enter` in the input, or a click outside.
 - **Display.** The input shows the date in your `dateFormat` followed by the time as `HH:mm:ss` (24-hour): `15.03.2025 13:07:09`. `dateFormat` only controls the date part. The time format is fixed.
 - **Typing.** `15.03.2025 13:07:09`, `15.03.2025 13:07` (seconds default to 0), ISO `2025-03-15T13:07:09` (or with a space), and Unix timestamps. A date typed **without** a time takes the time currently in the selector. An invalid time (`24:00`, `10:60`) is rejected like any invalid date.
 - **Range and multiple.** One time applies to all selected dates: the selector sets every date at once. Text typed with different times per date (`10.03.2025 09:00:00 - 12.03.2025 18:30:00`) keeps them until you touch the selector.
 - **Limits are day-based.** `minDate`, `maxDate` and the disabled-date options compare calendar days; they don't constrain the time of day.
-- **Screen readers.** The selector is a labelled group of buttons named by unit and value ("Hours, 13", `aria-haspopup="listbox"`, `aria-expanded`); each grid is a `listbox` of `option`s labelled by the unit, and focus returns to the field after a pick, so the new value is read out. The strings (`time` / `hours` / `minutes` / `seconds` / `back`) are overridable in the `locale` object and translated in `locales/uk`; the selection announcement includes the time.
+- **Daylight saving.** A time that doesn't exist (the hour skipped by a daylight-saving change, e.g. `02:30` on 9 March 2025 in New York) is moved to the next valid time (`03:30`), and the input shows that.
+- **Screen readers.** The selector is a labelled group of buttons named by unit and value ("Hours, 13", `aria-haspopup="listbox"`, `aria-expanded`); each grid is a `listbox` of `option`s labelled by the unit, and focus returns to the field after a pick, so the new value is read out. The selection announcement includes the time. The strings are listed under [Localisation](#localisation).
 - **Switching at runtime.** `setOptions({ enableTime })` adds `00:00:00` to selected dates or drops their time.
 
 ### Time and `outputTimestamp`
 
-Timestamps are understood on input whatever the options are (see [Unix timestamps](#unix-timestamps)); `outputTimestamp` and `enableTime` decide what comes out:
+Timestamps are understood on input whatever the options are (see [Unix timestamps](#unix-timestamps), which also lists what counts as "out"); `outputTimestamp` and `enableTime` decide what comes out:
 
 | | `outputTimestamp: false` (default) | `outputTimestamp: true` |
 | --- | --- | --- |
 | **`enableTime: false`** (default) | `Date` at local midnight; ISO `2025-03-15` | timestamp of local midnight: `1741996800` |
 | **`enableTime: true`** | `Date` with the selected time; ISO `2025-03-15T13:07:09` | exact timestamp including the time: `1742044029` |
-
-"Out" means `getDate()`, `onChange`, the `change` event `detail`, the `isoInput` value, and the web component's `value` and form value. The text in the input is always the formatted date (plus `HH:mm:ss` with `enableTime`).
 
 All combinations, with and without time, with and without timestamp output (values for a browser in UTC):
 
@@ -242,14 +283,9 @@ withTime(new Datepicker(input, { dateFormat: 'dd.MM.yyyy', outputTimestamp: true
 
 Ranges work the same way: `withTime(withRange(new Datepicker(input, { outputTimestamp: true })))` returns `[1741597200, 1741804200]` for 10 March 09:00:00 to 12 March 18:30:00 (UTC). In the web component, `<ten-protons-datepicker enable-time mode="range">` has the value `2025-03-10T09:00:00/2025-03-12T18:30:00`, or `1741597200/1741804200` with `output-timestamp`.
 
-Things to know:
-
-- **Local time.** As everywhere in the picker, the time of day is in the browser's time zone, and the timestamps are the instants of those local times. With [`valueInUtc`](#utc-backends-valueinutc) the values are converted to and from UTC for you. A time that doesn't exist (the hour skipped by a daylight-saving change, e.g. `02:30` on 9 March 2025 in New York) is moved to the next valid time (`03:30`), and the input shows that.
-- **Seconds.** Dates are kept to the second; milliseconds are dropped.
-
 ## UTC backends (`valueInUtc`)
 
-Many backends only speak UTC, while users pick dates in their own time zone. Normally that means every app writes the same conversion code in both directions, and gets it subtly wrong around midnight. Set **`valueInUtc: true`** (`value-in-utc` on the web component) and the picker does it: **everything that goes in or comes out is UTC, everything the user sees and edits is local.**
+Set **`valueInUtc: true`** (`value-in-utc` on the web component) and **everything that goes in or comes out is UTC, everything the user sees and edits is local.** The problem it solves is described under [Highlights](#utc-backends-without-conversion-code-valueinutc).
 
 ```ts
 const dp = new Datepicker(input, { valueInUtc: true });
@@ -262,7 +298,7 @@ dp.getDate().toISOString();                     // '2025-03-15T00:00:00.000Z', s
 <ten-protons-datepicker name="due" value-in-utc value="2025-03-15T00:00:00.000Z"></ten-protons-datepicker>
 ```
 
-Without it, a user in Kyiv (UTC+2) who picks 15 March gets a `Date` for **local** midnight, and `toISOString()` sends `2025-03-14T22:00:00.000Z`: the backend stores the 14th. That is the bug this option removes.
+**Without the option everything is local**, and "local" is the browser's time zone: a picked day is a local midnight, the time selector's time is the local wall-clock time, and timestamps are the instants of those local times. So a timestamp for UTC midnight (`1741996800` = 2025-03-15T00:00Z) is still March 14 in New York; with `valueInUtc` it is 15 March in every time zone.
 
 What "in and out" covers: `selected`, `defaultDate`, `minDate` / `maxDate`, `disabledDates` (array), `setDate()`, `jumpToDate()`, the `value` attribute, and typed or pasted ISO strings and timestamps, in; `getDate()`, `onChange`, the `change` event, `isoInput` and the web component's `value` / form value, out. The text in the input is always the user's local display and is never converted.
 
@@ -303,18 +339,21 @@ Things to know:
 | `Home` / `End` | start / end of the week |
 | `PageUp` / `PageDown` | previous / next month; with `Shift`, previous / next year |
 | `Enter` / `Space` | select |
-| `Escape` | close, focus returns to where it came from; with a time grid open it closes the grid first and returns focus to its field |
-| `Tab` | cycles inside the dialog (`aria-modal`), including the time fields |
-| `Enter` / `Space` on a time field | open its grid (a second tap closes it) |
-| `← → ↑ ↓` in a time grid | previous / next value, up / down a row (← → mirror in RTL; no wrapping) |
-| `Home` / `End` in a time grid | first / last value |
-| `Enter` / `Space` on a time value | set it, close the grid, focus returns to the field |
+| `Escape` | close, focus returns to where it came from; with a month, year or time grid open it closes the grid first and returns focus to its button |
+| `Tab` | cycles inside the dialog (`aria-modal`), including the month / year buttons and the time fields |
+| `Enter` / `Space` on a month, year or time button | open its grid (a second press closes it) |
+| `← → ↑ ↓` in a grid (months, years, hours, minutes, seconds) | previous / next option, up / down a row (← → mirror in RTL; no wrapping, rows continue across row ends) |
+| `Home` / `End` in a grid | first / last option |
+| `PageUp` / `PageDown` in a grid | one visible page up / down in the same column (the first / last row where the grid doesn't scroll, e.g. hours and months) |
+| typing in a grid | type-ahead: numbers match the value as a prefix (`4`, `45`, `05`, `198` → 1980, `1985`), months match the name (`be` → березень, case-insensitive); the buffer resets after about half a second. A repeated letter (`jj`) cycles through the names starting with it |
+| `Enter` on an option | pick it, close the grid, focus returns to the button, which now carries the new value |
+| `Space` on an option | the same, on key release (so the release can't click the button focus returns to) |
 
 Opening with the mouse keeps focus in the input so you can keep typing; opening with the keyboard, the toggle button or `open()` moves focus into the grid.
 
 ## Localisation
 
-Month and weekday names, the default numeric format, first weekday and direction come from `Intl`. UI strings default to English (`today` is localised through `Intl.RelativeTimeFormat`). The strings are `today clear prevMonth nextMonth label selected` and, for the time selector, `time hours minutes seconds back`. Override what you need:
+Month and weekday names, the default numeric format, first weekday and direction come from `Intl`. UI strings default to English (`today` is localised through `Intl.RelativeTimeFormat`). The strings are `today clear prevMonth nextMonth label selected`, `month year` (the header buttons: "Month, November" and the grids' headings) and, for the time selector, `time hours minutes seconds back` (the back button of every grid). `month` and `year` are new, and the `LocaleStrings` type now requires them: code that builds a complete `LocaleStrings` by hand needs them too (a `LocaleObject` is `Partial`, so locale objects are unaffected). Override what you need; they are also translated in `locales/uk`:
 
 ```ts
 new Datepicker(input, { locale: { code: 'de', clear: 'Löschen', prevMonth: 'Voriger Monat', nextMonth: 'Nächster Monat', label: 'Datum wählen', selected: 'Ausgewählt' } });
@@ -339,7 +378,7 @@ Current Chrome, Firefox, Safari (14.1+) and Edge. Form association of the Web Co
 
 ## Not implemented yet
 
-Presets and a year / month picker view are not implemented. Month and year are reachable with the previous / next buttons and `PageUp` / `PageDown` (`Shift` for years).
+Presets are not implemented.
 
 ## Development
 

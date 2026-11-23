@@ -1,5 +1,5 @@
 import { Calendar, CLASSES, type CalendarHandlers, type ViewState } from './Calendar';
-import { addMonths, dayKey, formatISO, monthStart, normDate, parseValueList, startOfDay, toDate, toInstant, toUnix } from './Day';
+import { addMonths, dayKey, formatISO, makeDate, monthStart, normDate, parseValueList, startOfDay, toDate, toInstant, toUnix } from './Day';
 import { formatDate, formatTime, parseDates } from './format';
 import { resolveLocale, type Locale } from './localization';
 import { getMode, type Mode } from './modes';
@@ -91,6 +91,7 @@ export class Datepicker extends EventTarget {
     },
     clear: () => this.setSel([], true),
     close: () => this.hide(true),
+    show: (month, panel) => this.show(month, panel),
     time: (t) => this.setTime(t),
   };
 
@@ -330,13 +331,13 @@ export class Datepicker extends EventTarget {
 
   // ------------------------------------------------------------------ view
 
-  /** Focuses `d` (clamped) and scrolls the visible months to include it. */
-  private reveal(d: Date): void {
+  /** Focuses `d` (clamped) and scrolls the visible months to include it, or with `panel` puts its month in that panel. */
+  private reveal(d: Date, panel?: number): void {
     this.focus = this.clamp(d);
     const n = this.monthsShown();
     const m = monthStart(this.focus);
     const k = dayKey(m);
-    let v = k < dayKey(this.view) ? m : k > dayKey(addMonths(this.view, n - 1)) ? addMonths(m, 1 - n) : this.view;
+    let v = panel !== undefined ? addMonths(m, -panel) : k < dayKey(this.view) ? m : k > dayKey(addMonths(this.view, n - 1)) ? addMonths(m, 1 - n) : this.view;
     if (this.lo && dayKey(v) < dayKey(monthStart(this.lo))) v = monthStart(this.lo);
     this.setView(v);
   }
@@ -347,6 +348,16 @@ export class Datepicker extends EventTarget {
     this.view = v;
     this.emit('monthChange', new Date(v));
     if (v.getFullYear() !== prev.getFullYear()) this.emit('yearChange', new Date(v));
+  }
+
+  /**
+   * A month / year grid pick: shows `month` in `panel` and focuses the same day of it (the month's last day if it is
+   * shorter), clamped to min/max. Navigation only: the selection, `pending` and `change` are untouched.
+   */
+  private show(month: Date, panel: number): void {
+    const [y, m] = [month.getFullYear(), month.getMonth()];
+    this.reveal(makeDate(y, m, Math.min(this.focus.getDate(), makeDate(y, m + 1, 0).getDate())), panel);
+    this.refresh();
   }
 
   private move(d: Date): void {
@@ -376,7 +387,29 @@ export class Datepicker extends EventTarget {
       disabled: this.isDisabled,
       canPrev: !this.lo || dayKey(this.view) > dayKey(monthStart(this.lo)),
       canNext: !this.hi || dayKey(addMonths(this.view, this.monthsShown())) <= dayKey(this.hi),
+      years: this.yearSpan(),
+      monthOff: this.monthOff,
     };
+  }
+
+  private monthOff = (y: number, m: number): boolean =>
+    (this.lo !== null && dayKey(makeDate(y, m + 1, 0)) < dayKey(this.lo)) || (this.hi !== null && dayKey(makeDate(y, m, 1)) > dayKey(this.hi));
+
+  /**
+   * Years the year grid lists: `yearRange` (default: this year ± 100), its ends replaced by the years of `minDate` /
+   * `maxDate`, kept within 1-9999 (year 0 is "1 BC" in `Intl`, above 9999 ISO breaks), and widened to the years on show.
+   */
+  private yearSpan(): [number, number] {
+    const r = this.o.yearRange;
+    const now = new Date().getFullYear();
+    let [a, b] = r && Number.isInteger(r[0]) && Number.isInteger(r[1]) && r[0] <= r[1] ? r : [now - 100, now + 100];
+    if (this.lo) a = this.lo.getFullYear();
+    if (this.hi) b = this.hi.getFullYear();
+    if (a > b) this.lo ? (b = a) : (a = b); // the limit that replaced an end wins
+    return [
+      Math.min(Math.max(1, a), this.view.getFullYear()),
+      Math.max(Math.min(9999, b), addMonths(this.view, this.monthsShown() - 1).getFullYear()),
+    ];
   }
 
   private refresh(focus = false): void {

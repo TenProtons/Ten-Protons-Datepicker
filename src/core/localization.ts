@@ -11,12 +11,16 @@ export interface Locale {
   format: string;
   /** "March 2025" */
   title(d: Date): string;
+  /** `title(d)` split in locale order: the `month` and `year` parts become buttons, the rest (`literal`) is plain text. */
+  titleParts(d: Date): Array<{ type: string; value: string }>;
   /** "Wednesday, March 5, 2025" */
   label(d: Date): string;
   /** Weekday name; `i` = 0 for Sunday. */
   dow(i: number, long?: boolean): string;
   /** Month name as used inside a date (genitive in e.g. Ukrainian). */
   month(i: number, short?: boolean): string;
+  /** Month name on its own (nominative: "листопад"), as listed in the month grid. */
+  monthName(i: number): string;
   /** Month index for a parsed name (any form), or -1. */
   monthIndex(name: string): number;
   /** Day number in the locale's digits. */
@@ -35,6 +39,8 @@ const EN: LocaleStrings = {
   minutes: 'Minutes',
   seconds: 'Seconds',
   back: 'Back to calendar',
+  month: 'Month',
+  year: 'Year',
 };
 
 // Always the Gregorian calendar, so `ar-SA` / `th-TH` don't silently switch calendar systems.
@@ -97,7 +103,7 @@ export const resolveLocale = (input?: string | LocaleObject, firstDayOverride?: 
 
   const titleF = dtf({ month: 'long', year: 'numeric' });
   const labelF = dtf({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  const nf = new Intl.NumberFormat(code);
+  const nf = new Intl.NumberFormat(code, { useGrouping: false }); // years: "2026", not "2,026"
   const nums: string[] = [];
 
   const names = (month: 'long' | 'short', withDay: boolean) =>
@@ -118,6 +124,15 @@ export const resolveLocale = (input?: string | LocaleObject, firstDayOverride?: 
 
   const month = (i: number, short = false): string =>
     (short ? (custom?.monthsShort ?? custom?.months) : custom?.months)?.[i] ?? inDate[short ? 'short' : 'long']()[i]!;
+  const monthName = (i: number): string => custom?.months?.[i] ?? alone.long()[i]!;
+  const titleParts = (d: Date): Array<{ type: string; value: string }> =>
+    custom?.months
+      ? [
+          { type: 'month', value: custom.months[d.getMonth()]! },
+          { type: 'literal', value: ' ' },
+          { type: 'year', value: String(d.getFullYear()) },
+        ]
+      : titleF.formatToParts(d).map((p) => (p.type === 'literal' ? { ...p, value: p.value.replace(/ /g, ' ') } : p)); // `format()` already turns U+202F into a plain space
   const dow = (i: number, long = false): string =>
     (long ? custom?.weekdays : (custom?.weekdaysShort ?? custom?.weekdays))?.[i] ?? weekdays[long ? 'long' : 'short']()[i]!;
 
@@ -137,12 +152,14 @@ export const resolveLocale = (input?: string | LocaleObject, firstDayOverride?: 
       return format();
     },
     title: (d) => (custom?.months ? `${custom.months[d.getMonth()]} ${d.getFullYear()}` : titleF.format(d)),
+    titleParts,
     label: (d) =>
       custom?.months || custom?.weekdays
         ? `${dow(d.getDay(), true)}, ${d.getDate()} ${month(d.getMonth())} ${d.getFullYear()}`
         : labelF.format(d),
     dow,
     month,
+    monthName,
     monthIndex: (name) => lookup().get(norm(name)) ?? -1,
     num: (n) => (nums[n] ??= nf.format(n)),
   };

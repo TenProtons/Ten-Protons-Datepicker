@@ -1,3 +1,4 @@
+import type { Grid } from './grid';
 import type { Locale } from './localization';
 import type { ClassNames } from './types';
 
@@ -8,8 +9,8 @@ export interface TimeUIOptions {
   loc: Locale;
   cls: ClassNames;
   id: string;
-  /** The months block: the selector shows its value grids over it. */
-  months: HTMLElement;
+  /** The calendar's value grid: the fields open their values in it, in place of the days. */
+  grid: Grid;
   /** Call with the new time whenever the user picks a value. */
   change(time: Time): void;
 }
@@ -19,8 +20,6 @@ export interface TimeUI {
   el: HTMLElement;
   /** Shows `time` (without echoing a `change`). */
   set(time: Time): void;
-  /** Leaves an open value grid for the days (`focus`: back to the field that opened it). `false` if none was open. */
-  close(focus?: boolean): boolean;
 }
 
 export type TimeUIFactory = (options: TimeUIOptions) => TimeUI;
