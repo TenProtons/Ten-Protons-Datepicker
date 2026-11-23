@@ -101,13 +101,16 @@ export const parseUnix = (s: string, time = false, utc = false): Date | null =>
   /^\d{9,11}$/.test(s.trim()) ? fromUnix(+s, time, utc) : null;
 
 const VALUE = /\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?|\d{9,11}/g;
+// A minus at the start or right after `,` / `;` can't be a range dash: it is a negative timestamp, which is not accepted.
+const NEGATIVE = /(?:^|[,;])\s*-\s*\d{9,11}/;
 
 /**
  * Parses ISO dates (with an optional time and zone) and/or Unix timestamps separated by whitespace, `,` `;` `/` or dashes:
  * `2025-03-05`, `2025-03-05T13:07:09Z`, `1741996800`, `2025-03-01/2025-03-10`, `1741996800 - 1742428800`.
- * Returns picker dates (see `parseISO` for `time` / `utc`). `null` if anything else is in the text.
+ * Returns picker dates (see `parseISO` for `time` / `utc`). `null` if anything else is in the text, including a negative timestamp.
  */
 export const parseValueList = (s: string, time = false, utc = false): Date[] | null => {
+  if (NEGATIVE.test(s)) return null;
   const dates = (s.match(VALUE) ?? []).map((p) => parseISO(p, time, utc) ?? parseUnix(p, time, utc));
   return dates.every((d): d is Date => d !== null) && !s.replace(VALUE, '').replace(/[\s,;/–—-]/g, '') ? (dates as Date[]) : null;
 };
