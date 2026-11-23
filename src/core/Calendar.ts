@@ -1,4 +1,6 @@
-import { addDays, addMonths, dayKey, fromKey } from './Day';
+import { addDays, addMonths, dayKey, fromKey, makeDate } from './Day';
+import { attr, cx, h } from './dom';
+import { createGrid, type Grid } from './grid';
 import { nextFocus } from './keyboard';
 import type { Locale } from './localization';
 import type { Time, TimeUI, TimeUIFactory } from './time';
@@ -10,6 +12,7 @@ export const CLASSES: ClassNames = {
   months: 'tp-months',
   head: 'tp-head',
   title: 'tp-title',
+  titleBtn: 'tp-title-btn',
   nav: 'tp-nav',
   grid: 'tp-grid',
   dow: 'tp-dow',
@@ -29,6 +32,7 @@ export const CLASSES: ClassNames = {
   timeList: 'tp-time-list',
   timeOpt: 'tp-time-opt',
   timeFive: 'tp-time-five',
+  wide: 'tp-wide',
   sr: 'tp-sr',
 };
 
@@ -41,6 +45,8 @@ export interface CalendarHandlers {
   today(): void;
   clear(): void;
   close(): void;
+  /** A month / year grid pick: show `month` (its first day) in panel `panel`. Navigation only, the selection stays. */
+  show(month: Date, panel: number): void;
   /** The time selector changed. */
   time(time: Time): void;
 }
@@ -75,6 +81,10 @@ export interface ViewState {
   disabled(d: Date): boolean;
   canPrev: boolean;
   canNext: boolean;
+  /** Years listed by the year grid (includes the years on show). */
+  years: [from: number, to: number];
+  /** The whole month lies outside `minDate` / `maxDate`. */
+  monthOff(year: number, month: number): boolean;
 }
 
 interface Cell {
@@ -87,21 +97,19 @@ interface Cell {
   hidden: boolean;
 }
 interface Panel {
-  title: HTMLElement;
+  /** Locale-ordered pieces of the title: the month and year are buttons, the rest plain text. */
+  parts: Array<{ type: string; node: Node }>;
+  /** Visually hidden live text of the title ("November 2026"): what a screen reader hears on a month change. */
+  sr: HTMLElement;
+  month: HTMLElement;
+  year: HTMLElement;
   body: HTMLElement;
   cells: Cell[];
 }
 
-export const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', attrs: Record<string, string> = {}): HTMLElementTagNameMap[K] => {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  for (const k in attrs) e.setAttribute(k, attrs[k]!);
-  return e;
-};
-const cx = (...a: Array<string | false | null | undefined>): string => a.filter(Boolean).join(' ');
-/** Writes an attribute only when it changes (`null` removes it). */
-const attr = (e: Element, name: string, v: string | null): void => {
-  if (e.getAttribute(name) !== v) v === null ? e.removeAttribute(name) : e.setAttribute(name, v);
+/** Sets text only when it changes, so the stable header nodes aren't touched needlessly. */
+const text = (n: Node, v: string): void => {
+  if (n.textContent !== v) n.textContent = v;
 };
 
 /**
@@ -117,6 +125,8 @@ export class Calendar {
   private layoutKey = -1;
   private focusTd: HTMLElement | null = null;
   private timeUI: TimeUI | undefined;
+  private grid: Grid;
+  private s!: ViewState;
 
   constructor(private o: CalendarOptions) {
     const { loc, cls, on } = o;
@@ -129,6 +139,7 @@ export class Calendar {
     }));
 
     const months = h('div', cls.months);
+    this.grid = createGrid({ loc, cls, id: o.id, months });
     for (let i = 0; i < o.months; i++) months.append(this.panel(i));
 
     const foot = h('div', cls.foot);
@@ -138,7 +149,7 @@ export class Calendar {
       foot.append(b);
     }
     this.live = h('div', cls.sr, { 'aria-live': 'polite', 'aria-atomic': 'true' });
-    this.timeUI = o.time?.({ loc, cls, id: o.id, months, change: on.time });
+    this.timeUI = o.time?.({ loc, cls, id: o.id, grid: this.grid, change: on.time });
     root.append(months, ...(this.timeUI ? [this.timeUI.el] : []), foot, this.live);
     this.prev = root.querySelector<HTMLElement>('[data-a=prev]')!;
     this.next = root.querySelector<HTMLElement>('[data-a=next]')!;
@@ -163,10 +174,17 @@ export class Calendar {
   }
 
   update(s: ViewState, focus = false): void {
+    this.s = s;
     const key = dayKey(s.view);
     if (key !== this.layoutKey) {
       this.layoutKey = key;
       this.layout(s.view);
+      // The shown month changed under an open month / year grid (a pick, or the API): it no longer matches, so back to the days.
+      const t = this.grid.trigger;
+      if (t && this.panels.some((p) => p.month === t || p.year === t)) {
+        const active = (this.el.getRootNode() as Document | ShadowRoot).activeElement;
+        this.grid.close(!!active && this.grid.el.contains(active)); // focus moves only if it was in the panel
+      }
     }
     this.paint(s);
     if (focus) this.focusCell();
@@ -176,9 +194,9 @@ export class Calendar {
     this.focusTd?.focus({ preventScroll: true });
   }
 
-  /** Back to the days (closes the time selector's value grid). */
+  /** Back to the days (closes the value grid, whichever opened it). */
   reset(): void {
-    this.timeUI?.close();
+    this.grid.close();
   }
 
   /** Screen-reader announcement (the live region is the only text that changes). */
@@ -192,9 +210,18 @@ export class Calendar {
     const nav = (a: 'prev' | 'next') =>
       h('button', cls.nav, { type: 'button', 'data-a': a, 'aria-label': loc.strings[a === 'prev' ? 'prevMonth' : 'nextMonth'] });
 
-    const title = h('h2', cls.title, { id: titleId, 'aria-live': 'polite' });
+    // The title is built once, in the locale's order; layout() only rewrites the text, so the buttons keep focus and their state.
+    const title = h('h2', cls.title);
+    const sr = h('span', cls.sr, { id: titleId, 'aria-live': 'polite' });
+    const parts = loc.titleParts(makeDate(2000, 0, 1)).map(({ type }) => {
+      if (type !== 'month' && type !== 'year') return { type, node: document.createTextNode('') as Node };
+      const btn = h('button', cls.titleBtn, { type: 'button', 'aria-haspopup': 'listbox', 'aria-expanded': 'false' });
+      btn.addEventListener('click', () => this.toggleGrid(i, type));
+      return { type, node: btn as Node };
+    });
+    title.append(...parts.map((p) => p.node));
     const head = h('div', cls.head);
-    head.append(i === 0 ? nav('prev') : h('span', cls.nav), title, i === months - 1 ? nav('next') : h('span', cls.nav));
+    head.append(i === 0 ? nav('prev') : h('span', cls.nav), title, sr, i === months - 1 ? nav('next') : h('span', cls.nav));
 
     const tr = h('tr');
     for (let c = 0; c < 7; c++) {
@@ -209,7 +236,8 @@ export class Calendar {
     const table = h('table', cls.grid, { role: 'grid', 'aria-labelledby': titleId });
     table.append(thead, body);
 
-    this.panels.push({ title, body, cells: [] });
+    const btn = (type: string) => parts.find((p) => p.type === type)!.node as HTMLElement;
+    this.panels.push({ parts, sr, month: btn('month'), year: btn('year'), body, cells: [] });
     const wrap = h('div');
     wrap.append(head, table);
     return wrap;
@@ -221,7 +249,13 @@ export class Calendar {
       const m0 = addMonths(view, i);
       const first = addDays(m0, -((m0.getDay() - loc.firstDay + 7) % 7));
       const frag = document.createDocumentFragment();
-      p.title.textContent = loc.title(m0);
+      text(p.sr, loc.title(m0));
+      loc.titleParts(m0).forEach(({ type, value }, j) => {
+        const n = p.parts[j]!.node;
+        text(n, value);
+        if (type === 'month') attr(n as Element, 'aria-label', `${loc.strings.month}, ${loc.monthName(m0.getMonth())}`);
+        else if (type === 'year') attr(n as Element, 'aria-label', `${loc.strings.year}, ${value}`);
+      });
       p.cells = [];
       for (let r = 0; r < 6; r++) {
         const tr = h('tr');
@@ -284,10 +318,48 @@ export class Calendar {
     attr(this.next, 'aria-disabled', s.canNext ? null : 'true');
   }
 
+  /** The month / year button of panel `i` opens its grid, or closes it when it is the one open. */
+  private toggleGrid(i: number, type: string): void {
+    const { loc, on } = this.o;
+    const { s, grid } = this;
+    const trigger = this.panels[i]![type === 'month' ? 'month' : 'year'];
+    if (grid.trigger === trigger) return void grid.close(true);
+    const m0 = addMonths(s.view, i);
+    const [y, m] = [m0.getFullYear(), m0.getMonth()];
+    const [ty, tm] = [Math.floor(s.today / 10000), Math.floor(s.today / 100) % 100];
+    // `show` first, so the trigger's label already carries the new value when `close` moves focus to it.
+    const pick = (to: Date) => {
+      on.show(to, i);
+      grid.close(true);
+    };
+    if (type === 'month') {
+      grid.open({
+        trigger,
+        title: loc.strings.month,
+        cols: 3,
+        wide: true,
+        selected: m,
+        options: Array.from({ length: 12 }, (_, k) => ({ text: loc.monthName(k), today: y === ty && k === tm, off: s.monthOff(y, k) })),
+        pick: (k) => pick(makeDate(y, k, 1)),
+      });
+    } else {
+      const from = s.years[0];
+      grid.open({
+        trigger,
+        title: loc.strings.year,
+        cols: 4,
+        wide: true,
+        selected: y - from,
+        options: Array.from({ length: s.years[1] - from + 1 }, (_, k) => ({ text: loc.num(from + k), find: String(from + k), today: from + k === ty })),
+        pick: (k) => pick(makeDate(from + k, m, 1)),
+      });
+    }
+  }
+
   private onKey(e: KeyboardEvent): void {
     const { loc, on, inline } = this.o;
     if (e.key === 'Escape') {
-      if (this.timeUI?.close(true)) return e.stopPropagation(); // an open value grid closes first
+      if (this.grid.close(true)) return e.stopPropagation(); // an open value grid closes first
       if (inline) return;
       e.stopPropagation();
       return on.close();

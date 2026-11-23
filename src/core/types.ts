@@ -28,6 +28,9 @@ export interface LocaleStrings {
   minutes: string;
   seconds: string;
   back: string;
+  /** The month and year buttons in the calendar header: their names ("Month, November") and their grids' headings. */
+  month: string;
+  year: string;
   /** Prefix of the screen-reader announcement, e.g. "Selected: Wednesday, March 5, 2025". */
   selected: string;
 }
@@ -54,6 +57,8 @@ export interface ClassNames {
   months: string;
   head: string;
   title: string;
+  /** The month and year buttons inside the title. */
+  titleBtn: string;
   nav: string;
   grid: string;
   dow: string;
@@ -70,11 +75,13 @@ export interface ClassNames {
   /** Time selector row and its field buttons (`enableTime`). */
   time: string;
   timeField: string;
-  /** The value grid that replaces the days: overlay, scrollable list, option, and options that are multiples of 5. */
+  /** The value grid that replaces the days (time values, months, years): overlay, scrollable list, option, and options that are multiples of 5. */
   timePanel: string;
   timeList: string;
   timeOpt: string;
   timeFive: string;
+  /** Added to the list of the month and year grids, whose columns share the full width. */
+  wide: string;
   /** Visually hidden (screen-reader only) text. */
   sr: string;
 }
@@ -108,6 +115,12 @@ export interface DatepickerOptions {
   inline?: boolean;
   showOtherMonths?: boolean;
   numberOfMonths?: 1 | 2;
+  /**
+   * Years listed by the year grid (the year button in the header), as absolute years `[from, to]`, both inclusive.
+   * Defaults to 100 years either side of this year. The years of `minDate` / `maxDate` replace the matching end,
+   * and the list always includes the years on show. Limited to 1-9999; a reversed or invalid range is ignored.
+   */
+  yearRange?: [from: number, to: number];
   position?: Position;
   /** Force `light` / `dark`. Omit to follow `prefers-color-scheme`. */
   theme?: 'light' | 'dark';

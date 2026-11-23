@@ -15,6 +15,8 @@ export const uk: LocaleObject = {
   minutes: 'Хвилини',
   seconds: 'Секунди',
   back: 'Назад до календаря',
+  month: 'Місяць',
+  year: 'Рік',
 };
 
 registerLocale(uk);

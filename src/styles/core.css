@@ -17,6 +17,11 @@
 .tp-months>[inert]{visibility:hidden}
 .tp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
 .tp-title{flex:1;margin:0;font-size:1em;font-weight:600;text-align:center}
+/* The month and year buttons in the title: borderless (the transparent border keeps the size when the accent one appears while their grid is open). `.tp-dp` is in the selectors so a page's own `button` rules can't restyle them. */
+.tp-dp .tp-title-btn{box-sizing:border-box;width:auto;min-width:0;height:auto;margin:0;padding:.125rem .375rem;border:1px solid transparent;border-radius:var(--tp-radius);background:none;color:inherit;font:inherit;cursor:pointer}
+.tp-dp .tp-title-btn:hover{background:var(--tp-hover)}
+.tp-dp .tp-title-btn[aria-expanded="true"]{border-color:var(--tp-accent)}
+.tp-dp .tp-title-btn:focus-visible{outline:2px solid var(--tp-focus);outline-offset:1px}
 .tp-nav{display:grid;place-items:center;width:var(--tp-cell);height:var(--tp-cell);padding:0;border:0;border-radius:var(--tp-radius);background:none;color:inherit;cursor:pointer}
 .tp-nav[data-a]:hover{background:var(--tp-hover)}
 .tp-nav[data-a]::before{content:"";width:.5rem;height:.5rem;border:solid currentColor;border-width:0 0 2px 2px;transform:rotate(45deg)}
@@ -56,6 +61,9 @@
 .tp-time-panel>*{width:100%;max-width:calc(7*var(--tp-cell))}
 .tp-time-list{position:relative;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:var(--tp-border) transparent;display:grid;grid-template-columns:repeat(var(--tp-cols),max-content);justify-content:center;align-content:start}
 .tp-time-opt{display:grid;place-items:center}
+/* Month (3 columns) and year (4) grids: the columns share the list's full width (one month wide, gutter included) instead of being day-cell squares. */
+.tp-wide{grid-template-columns:repeat(var(--tp-cols),minmax(0,1fr))}
+.tp-wide>.tp-time-opt{width:auto}
 .tp-dp .tp-time-list::-webkit-scrollbar{width:6px}
 .tp-dp .tp-time-list::-webkit-scrollbar-track{background:transparent}
 .tp-dp .tp-time-list::-webkit-scrollbar-thumb{background:var(--tp-border);border-radius:3px}

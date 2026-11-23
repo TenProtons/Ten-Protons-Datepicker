@@ -8,6 +8,9 @@ const ALNUM = /[\p{L}\p{N}]/u;
 const TIME = /(\d{1,2}):(\d{2})(?::(\d{2}))?/g;
 const pad = (n: number, len = 2): string => String(n).padStart(len, '0');
 
+/** Arabic-Indic / Persian digits to ASCII (their code points end in the digit's value). */
+export const latin = (s: string): string => s.replace(/[٠-٩۰-۹]/g, (c) => String(c.charCodeAt(0) & 15));
+
 /** `HH:mm:ss` (24-hour). With `enableTime` it follows the date, whatever `dateFormat` is. */
 export const formatTime = (d: Date): string => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 
@@ -51,8 +54,7 @@ export const parseDates = (text: string, fmt: string, loc: Locale, time?: Time):
     }
   }
 
-  // Arabic-Indic / Persian digits to ASCII (their code points end in the digit's value).
-  let s = text.replace(/[٠-٩۰-۹]/g, (c) => String(c.charCodeAt(0) & 15));
+  let s = latin(text);
   // Times are lifted out first so the date pattern never sees them; the i-th time belongs to the i-th date.
   const times: Time[] = [];
   if (time) s = s.replace(TIME, (_, h: string, m: string, sec?: string) => (times.push([+h, +m, +(sec ?? 0)]), ' '));
