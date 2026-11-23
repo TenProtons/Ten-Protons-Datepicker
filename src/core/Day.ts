@@ -101,8 +101,8 @@ export const parseUnix = (s: string, time = false, utc = false): Date | null =>
   /^\d{9,11}$/.test(s.trim()) ? fromUnix(+s, time, utc) : null;
 
 const VALUE = /\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?|\d{9,11}/g;
-// A minus at the start or right after `,` / `;` can't be a range dash: it is a negative timestamp, which is not accepted.
-const NEGATIVE = /(?:^|[,;])\s*-\s*\d{9,11}/;
+// A "-" before a timestamp is a minus sign, not a range dash, when the text starts there or the previous non-space character is another separator (`- – — / , ;`). Negative timestamps are not accepted.
+const NEGATIVE = /(?:^|[-–—/,;])\s*-\s*\d{9,11}/;
 
 /**
  * Parses ISO dates (with an optional time and zone) and/or Unix timestamps separated by whitespace, `,` `;` `/` or dashes:
